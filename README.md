@@ -1,3 +1,5 @@
+
+![](https://raw.githubusercontent.com/Havegum/Terrain-Generator/master/public/favicon.png)
 # Noise & voronoi based terrain generation
 *Fully based on [the fantasy map generator by mewo2](https://github.com/mewo2/terrain).*
 
