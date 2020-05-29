@@ -1,5 +1,5 @@
 [package]
-name = "terrain"
+name = "Terrain Generator"
 version = "0.0.1"
 authors = ["Halvard Vegum <30663324+Havegum@users.noreply.github.com>"]
 edition = "2018"
