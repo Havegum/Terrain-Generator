@@ -1,4 +1,4 @@
-import wasm from './terrain/Cargo.toml';
+import wasm from './terrain_generator/Cargo.toml';
 
 import SimplexNoise from 'simplex-noise';
 import { Delaunay } from 'd3-delaunay';

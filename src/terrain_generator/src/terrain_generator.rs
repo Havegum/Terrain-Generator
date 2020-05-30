@@ -1,3 +1,4 @@
+#[path = "utils.rs"]
 mod utils;
 
 use wasm_bindgen::prelude::*;
@@ -5,16 +6,6 @@ use bracket_noise::prelude::*;
 use bracket_random::prelude::*;
 use std::f64::consts::PI;
 extern crate web_sys;
-
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global allocator.
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
-#[wasm_bindgen]
-extern {
-    fn alert(s: String);
-}
 
 #[allow(unused_macros)]
 macro_rules! log {
