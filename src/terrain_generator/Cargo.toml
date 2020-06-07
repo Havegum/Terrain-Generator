@@ -32,6 +32,7 @@ wee_alloc = { version = "0.4.2", optional = true }
 # For simplex noise
 bracket-noise = "0.8.1"
 bracket-random = "0.8.0"
+delaunator = "0.2.0"
 
 [dependencies.web-sys]
 version = "0.3"

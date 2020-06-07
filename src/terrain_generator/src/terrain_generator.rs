@@ -188,7 +188,7 @@ impl TerrainGenerator {
         new_points
     }
 
-    pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> Vec<f64> {
+    pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f32, width: f64, height: f64) -> Vec<f64> {
         let size = radius / (2 as f64).sqrt();
 
         let cols = (width / size).floor();
@@ -208,24 +208,15 @@ impl TerrainGenerator {
         active.push(pos);
         points.extend(pos.iter());
 
-        let offset_magnitude = |h: f32| -> f64 {
-            if h > sea_level as f32 {
-                h as f64
-            } else {
-                1.0 - h as f64
-            }
-        };
-
+        let offset_magnitude = |h: f32| if h > sea_level { h } else { 1.0 - h };
 
         while active.len() > 0 {
             let rand_i = (self.rng.rand::<f64>() * active.len() as f64).floor() as usize;
             let point = &active[rand_i];
-            let min_offset = size * offset_magnitude(self.noise_single(point[0] as f32, point[1] as f32));
+            let min_offset = size * offset_magnitude(self.noise_single(point[0] as f32, point[1] as f32)) as f64;
             let new_points = self.sample_poisson_points(30, size, width, height, min_offset, &point, &mut grid);
 
-            for sample in new_points.iter() {
-                points.extend(sample.iter());
-            }
+            for sample in new_points.iter() { points.extend(sample.iter()); }
             active.extend(new_points.iter());
             active.remove(rand_i);
         }
