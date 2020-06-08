@@ -13,12 +13,10 @@ let extent = { width: 1, height: 1 };
 let seaLevel = 0.39;
 
 let triangleEdges = [];
-let centroids = [];
 let heights = [];
 let isLand = [];
 let cells = [];
-let nodes = [];
-let nodeAdjacency = [];
+let voronoiAdjacency = [];
 let circumcenters = [];
 let coastLines = [];
 let rivers = [];
@@ -37,13 +35,14 @@ $: viewBox = `0 0 ${viewBoxWidth} ${viewBoxHeight}`;
 onMount(() => {
 	if (!svg) return;
 	let seed = Math.floor(Math.random() * 1e8);
+	seed = 26459687;
 	console.log('seed:', seed);
 	generator = new TerrainGenerator({
 		// yieldPoints: true,
 		points: 2**10,
 		seaLevel,
-		// seed
-		seed: 82013022
+		seed
+		// seed: 82013022
 		// seed: 0.6427742671532695
 		// seed: 0.2459701851370404,
 	});
@@ -66,28 +65,24 @@ function hideHeightmap() {
 async function generate () {
 	let world = await generator.generate();
 
-	nodes = world.points;
-
 	cells = world.cells;
-	nodes = world.nodes;
 	rivers = world.rivers;
 	isLand = world.isLand;
-	centroids = world.points;
 	coastLines = world.coastLines;
 	heights = world.triangleHeights;
-	nodeAdjacency = world.voronoiAdjacency;
-	circumcenters = world.voronoi.circumcenters;
+	voronoiAdjacency = world.voronoiAdjacency;
+	circumcenters = world.circumcenters;
 
 	triangleEdges = Array(world.voronoiTriangles.length / 3)
 			.fill()
 			.map((_, i) => {
 				let j = i * 3;
-				let centroidIndex = world.voronoiTriangles[j + 0] * 2;
+				let cellIndex = world.voronoiTriangles[j + 0] * 2;
 				let nodeIndex1 = world.voronoiTriangles[j + 1] * 2;
 				let nodeIndex2 = world.voronoiTriangles[j + 2] * 2;
 
 				return [
-					[world.delaunay.points[centroidIndex], world.delaunay.points[centroidIndex + 1]],
+					[world.points[cellIndex], world.points[cellIndex + 1]],
 					[circumcenters[nodeIndex1], circumcenters[nodeIndex1 + 1]],
 					[circumcenters[nodeIndex2], circumcenters[nodeIndex2 + 1]]
 				];
@@ -111,9 +106,6 @@ function interpolateHeight (i) {
 
 	<button on:click={generate}>Generate</button>
 	<button on:mousedown={revealHeightmap} on:mouseup={hideHeightmap}>Show Heightmap</button>
-	<!-- <button on:click={improve}>ImprovePoints</button>
-	<button on:click={delaunay}>Delaunay</button>
-	<button on:click={mapHeights}>Map heights</button> -->
 	<input type="number" bind:value={circumcenterIndex}>
 </div>
 
@@ -123,16 +115,15 @@ function interpolateHeight (i) {
 
 
 
-		<g class="cells">
+		<!-- <g class="cells">
 			{#each cells as cell, i}
 				<path
 					d={svgRender(cell)}
 				/>
 			{/each}
-		</g>
+		</g> -->
 		<g class="triangles">
 			{#each triangleEdges as edge, i}
-			<!-- fill={triangle.height > sealevel ? interpolateLand(1 - triangle.height) : interpolateSea(1 - triangle.height)} -->
 				<path
 					d={svgRender(edge)}
 					fill={interpolateHeight(i)}
@@ -171,7 +162,7 @@ function interpolateHeight (i) {
 				stroke="red"
 				stroke-width="3"
 			/>
-			{#each nodeAdjacency[circumcenterIndex] as neighbor}
+			{#each voronoiAdjacency[circumcenterIndex] as neighbor}
 				<line
 					x1={circumcenters[circumcenterIndex * 2 + 0] * 1000}
 					y1={circumcenters[circumcenterIndex * 2 + 1] * 1000}
@@ -227,11 +218,13 @@ canvas {
 	width: 100%;
 	height: 100%;
 	opacity: 0;
+	display:none;
 	transition: opacity 200ms;
 }
 
 canvas.visible {
 	opacity: .95;
+	display: block;
 }
 
 .cells path {

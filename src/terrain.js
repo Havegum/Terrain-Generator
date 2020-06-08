@@ -330,12 +330,12 @@ function triangulateHeight (cellHeights, heights, triangles, seaLevel) {
   }
 }
 
-function getCoastCells (heights, delaunay, seaLevel) {
+function getCoastCells (heights, neighbors, seaLevel) {
   let coasts = new Array();
 
   for (let i = 0; i < heights.length; i++) {
     if (heights[i] >= seaLevel) {
-      if ([...delaunay.neighbors(i)].some(n => heights[n] < seaLevel)) {
+      if (neighbors[i].some(n => heights[n] < seaLevel)) {
         coasts.push(i);
       }
     }
@@ -394,29 +394,6 @@ function getRivers (heights, adjacent, seaLevel, voronoiCells, cellHeights) {
   return rivers;
 }
 
-// For heightmap displaying
-// function generateHeightmap (size) {
-//   let heights = Array(size * size).fill(0);
-//   let points = Array(size * size * 2).fill(0);
-//   for (let i = 0; i < size * size; i++) {
-//     points[i * 2 + 0] = ((i % size) / size) - 0.5;
-//     points[i * 2 + 1] = (Math.floor(i / size) / size) - 0.5;
-//   }
-//   heights = noisyHeights(points, heights);
-//   heights = plateau(points, heights);
-//
-//   let pixels = new Uint8ClampedArray(size * size * 4);
-//   for (let i = 0; i < size * size; i++) {
-//     let x = i % size;
-//     let y = Math.floor(i / size);
-//     let val = heights[i];
-//     pixels[i * 4 + 0] = Math.floor(val * 255);
-//     pixels[i * 4 + 1] = Math.floor(val * 255);
-//     pixels[i * 4 + 2] = Math.floor(val * 255);
-//     pixels[i * 4 + 3] = 255;
-//   }
-//   return pixels;
-// }
 
 
 function generateResources (size) {
@@ -475,22 +452,28 @@ class TerrainGenerator {
     this.yieldPoints = yieldPoints;
     this.yieldRelax = yieldRelax;
     this.yieldHeights = yieldHeights;
-    this.rust = new Promise((resolve, reject) => wasm()
-      .then(results => resolve(new results.TerrainGenerator(seed)))
-      .catch(reject)
+    this.wasm = new Promise((resolve, reject) => wasm()
+      .then(result => {
+        this.terrainGen = new result.TerrainGenerator(seed);
+        this.voronoiGen = result.get_voronoi;
+        resolve(true);
+      }).catch(reject)
     );
   }
 
   async fractalNoise (x, y) {
-    return (await this.rust).fractal_noise(x, y);
+    await this.wasm;
+    return this.terrainGen.fractal_noise(x, y);
   }
 
   async noiseHeight (x, y, { min=-1, max=1 }={}) {
-    return (await this.rust).noise_single(x, y);
+    await this.wasm;
+    return this.terrainGen.noise_single(x, y);
   }
 
   async noisyHeights (points, heights) {
-    return Array.from((await this.rust).noise_array(points, heights));
+    await this.wasm;
+    return Array.from(this.terrainGen.noise_array(points, heights));
   }
 
   async generateHeightmap (size) {
@@ -505,8 +488,6 @@ class TerrainGenerator {
 
     let pixels = new Uint8ClampedArray(size * size * 4);
     for (let i = 0; i < size * size; i++) {
-      let x = i % size;
-      let y = Math.floor(i / size);
       let val = heights[i];
       pixels[i * 4 + 0] = Math.floor(val * 255);
       pixels[i * 4 + 1] = Math.floor(val * 255);
@@ -515,91 +496,6 @@ class TerrainGenerator {
     }
     return pixels;
   }
-
-
-  // async poissonDiscPoints (radius=0.05, seaLevel=0.4, width=1, height=1) {
-  //   return (await this.rust).poisson_disc_points(radius, seaLevel, width, height);
-  //   console.log('Returned from wasm:', (await this.rust).poisson_disc_points(0.1414, seaLevel, width, height));
-  //   // await (this.rust).poisson_disc_points(radius, seaLevel, width, height);
-  //   // https://www.youtube.com/watch?v=flQgnCUxHlw
-  //   let rng = rngUniform(0, 1);
-  //
-  //   let k = 30;
-  //   let size = radius / Math.sqrt(2);
-  //
-  //   let cols = Math.floor(width / size);
-  //   let rows = Math.floor(height / size);
-  //
-  //   let grid = Array(cols * rows).fill(undefined);
-  //   let active = [];
-  //   let points = [];
-  //
-  //   let x = rng() * width;
-  //   let y = rng() * height;
-  //   let i = Math.floor(x / size);
-  //   let j = Math.floor(y / size);
-  //   let pos = { x, y };
-  //   grid[i + j * cols] = [ pos ];
-  //   active.push(pos);
-  //   points.push(pos);
-  //
-  //
-  //   const euclidean = (a, b) => Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2);
-  //   const offsetMagnitude = h => h > seaLevel
-  //     ? h
-  //     : 1 - h;
-  //
-  //   while (active.length > 0) {
-  //     let randomIndex = Math.floor(rng() * active.length);
-  //     let point = active[randomIndex];
-  //     let minOffset = size * offsetMagnitude((fractalNoise(point.x, point.y) + 1 )/ 2);
-  //
-  //     pointHunt:
-  //     for (let n = 0; n < k; n++) {
-  //       let theta = rng() * Math.PI * 2;
-  //       let offset = size + rng() * minOffset;
-  //
-  //       let x = point.x + Math.cos(theta) * offset;
-  //       let y = point.y + Math.sin(theta) * offset;
-  //
-  //       if (0 > x || x > width || 0 > y || y > height) continue pointHunt;
-  //
-  //       let sample = { x, y };
-  //
-  //       let col = Math.floor(x / size);
-  //       let row = Math.floor(y / size);
-  //
-  //       // Loop through adjacent cells
-  //       for (let i = -1; i <= 1; i++) {
-  //         for (let j = -1; j <= 1; j++) {
-  //           let neighborIndex = row + i + cols * (col + j)
-  //           let neighbors = grid[neighborIndex];
-  //           if (!neighbors) continue;
-  //           // Consider each neighbor
-  //           for (let neighbor of neighbors) {
-  //             let dist = euclidean(sample, neighbor);
-  //             if (dist < minOffset) continue pointHunt;
-  //           }
-  //         }
-  //       }
-  //       if (!grid[row + col * cols]) {
-  //         grid[row + col * cols] = [ sample ];
-  //       } else {
-  //         grid[row + col * cols].push(sample);
-  //       }
-  //
-  //       active.push(sample);
-  //       points.push(sample);
-  //     }
-  //     active.splice(randomIndex, 1);
-  //   }
-  //
-  //   points.push({ x: 0, y: 0 });
-  //   points.push({ x: 0, y: height });
-  //   points.push({ x: width, y: 0 });
-  //   points.push({ x: width, y: height });
-  //   return points.map(p => [p.x - width/2, p.y - height/2]);
-  // }
 
 
   async generate () {
@@ -611,6 +507,12 @@ class TerrainGenerator {
     let yieldPoints = this.yieldPoints;
     let yieldRelax = this.yieldRelax;
     let yieldHeights = this.yieldHeights;
+    await this.wasm;
+
+    let terrainGen = this.terrainGen;
+    let voronoiGen = this.voronoiGen;
+    // let [ terrainGen, voronoiGen ] = await Promise.all([this.terrainGen, this.voronoiGen]);
+    // let voronoiGen = await this.voronoiGen;
 
     simplex = new SimplexNoise(seed);
     simplexTheta = new SimplexNoise(seed + 'Theta');
@@ -624,13 +526,13 @@ class TerrainGenerator {
     let radius = Math.pow(500 / points, 0.5) / 10;
 
     let timer = Date.now();
-    world.points = (await this.rust).poisson_disc_points(radius, seaLevel, extent.width, extent.height);
+    world.points = terrainGen.poisson_disc_points(radius, seaLevel, extent.width, extent.height);
     console.log(Date.now() - timer, 'ms');
     if (yieldPoints) return world;
 
-    const { voronoi, delaunay, centroids, cells } = improvePoints(world.points, relaxIterations, extent);
-    world.cells = cells;
-    world.points = centroids;
+    const { voronoi, delaunay, centroids } = improvePoints(world.points, relaxIterations, extent);
+    // world.cells = cells;
+    // world.points = centroids;
     world.delaunay = delaunay;
     world.voronoi = voronoi;
     if (yieldRelax) return world;
@@ -638,21 +540,33 @@ class TerrainGenerator {
     // A list of indexes such that each consecutive triplet is a triangle:
     // [i0, j0, k0, ..., in, jn, kn]
     // where `i` is an index in `world.points` and `j, k` are indices in `world.circumcenters`
-    const {
-      voronoiAdjacency,
-      voronoiTriangles,
-      voronoiPoints,
-      voronoiCells: voronoiCellsLookup
-    } = getVoronoiAdjacencies(voronoi);
+    // let {
+    //   voronoiAdjacency,
+    //   voronoiTriangles,
+    //   voronoiPoints,
+    //   voronoiCells: voronoiCellsLookup
+    // } = getVoronoiAdjacencies(voronoi);
+
+
+    timer = Date.now();
+    let rustVoronoi = voronoiGen(world.points);
+    console.log(Date.now() - timer, 'ms');
+    console.log(rustVoronoi);
+    let circumcenters = world.circumcenters = rustVoronoi.circumcenters;
+    let voronoiAdjacency = rustVoronoi.adjacent;
+    let voronoiTriangles = rustVoronoi.voronoi_triangles;
+    let voronoiPoints = rustVoronoi.voronoi_points;
+    let voronoiCellsLookup = rustVoronoi.voronoi_cells;
+    let neighbors = rustVoronoi.delaunay.neighbors;
 
     world.voronoiAdjacency = voronoiAdjacency;
     world.voronoiTriangles = voronoiTriangles;
     world.voronoiPoints = voronoiPoints;
 
     // Noise, then plateau
-    world.heights = Array(voronoi.circumcenters.length / 2).fill(0);
-    world.heights = await this.noisyHeights(voronoi.circumcenters, world.heights);
-    world.heights = plateau(voronoi.circumcenters, world.heights);
+    world.heights = Array(circumcenters.length / 2).fill(0);
+    world.heights = await this.noisyHeights(circumcenters, world.heights);
+    world.heights = plateau(circumcenters, world.heights);
     // world.heights = fillBasins(world.heights, voronoiAdjacency, seaLevel);
 
     //  Erode `n` times
@@ -662,14 +576,13 @@ class TerrainGenerator {
 
 
     // Propagate heights to voronoi centers
-    world.nodes = voronoi.circumcenters;
-    const getNodeCoordinates = getPointFrom(world.nodes)
-    world.nodes = Array(world.nodes.length / 2)
+    const getNodeCoordinates = getPointFrom(circumcenters);
+    world.nodes = Array(circumcenters.length / 2)
       .fill()
       .map((_, i) => getNodeCoordinates(i));
 
 
-    world.cellHeights = Array(world.points.length).fill(0)
+    world.cellHeights = Array(world.points.length / 2).fill(0)
       .map(getCellHeight(world.heights, voronoiPoints))
 
     // Calculate triangle heights (such that each triangle is over/under seaLevel as its respective cell)
@@ -678,8 +591,8 @@ class TerrainGenerator {
 
     world.isLand = world.triangleHeights.map(height => height >= seaLevel);
 
-    const getEdgeCoordinates = getPointFrom(voronoi.circumcenters);
-    world.coastCells = getCoastCells(world.cellHeights, delaunay, seaLevel);
+    const getEdgeCoordinates = getPointFrom(circumcenters);
+    world.coastCells = getCoastCells(world.cellHeights, neighbors, seaLevel);
     world.coastLines = getCoastLines(world.coastCells, seaLevel, voronoiPoints, voronoiCellsLookup, world.cellHeights)
       .map(d => d.map(getEdgeCoordinates))
 
