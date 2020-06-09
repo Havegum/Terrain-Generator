@@ -208,6 +208,52 @@ impl TerrainGenerator {
         active.push(pos);
         points.extend(pos.iter());
 
+        // Top
+        for _x in 0..cols as usize {
+            let x = (_x as f64) * size;
+            let y = 1e-8;
+            let pos = [x, y];
+            let i = (x / size).floor();
+            let j = (y / size).floor();
+            grid[i as usize].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+        // Left
+        for _y in 0..rows as usize {
+            let x = 1e-8;
+            let y = (_y as f64) * size;
+            let pos = [x, y];
+            let i = (x / size).floor();
+            let j = (y / size).floor();
+            grid[(i + j * cols) as usize].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+        // Bottom
+        for _x in 0..cols as usize {
+            let x = (1.0 + _x as f64) * size - 1e-8;
+            let y = height - 1e-8;
+            let pos = [x, y];
+            let i = (x / size).floor();
+            let j = rows - 1.0;
+            grid[(i + j * cols) as usize].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
+        // Right
+        for _y in 0..rows as usize {
+            let x = width - 1e-8;
+            let y = (1.0 + _y as f64) * size - 1e-8;
+            let pos = [x, y];
+            let i = cols - 1.0;
+            let j = (y / size).floor();
+            grid[(i + j * cols) as usize].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
         let offset_magnitude = |h: f32| if h > sea_level { h } else { 1.0 - h };
 
         while active.len() > 0 {

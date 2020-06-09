@@ -152,9 +152,11 @@ impl Voronoi {
                 x = (x1 + x3) / 2.0;
                 y = (y1 + y3) / 2.0;
             } else {
-                let d = 1.0 / ab;
-                x = x1 + (ey * bl - dy * cl) * d;
-                y = y1 + (dx * cl - ex * bl) * d;
+                // let d = 1.0 / ab;
+                // x = x1 + (ey * bl - dy * cl) * d;
+                // y = y1 + (dx * cl - ex * bl) * d;
+                x = (x1 + x2 + x3) / 3.0;
+                y = (y1 + y2 + y3) / 3.0;
             }
             circumcenters[j] = x;
             circumcenters[j + 1] = y;
@@ -236,7 +238,6 @@ impl Voronoi {
                 if e == e0 { break; }
             }
         }
-
         neighbors
     }
 }

@@ -225,8 +225,9 @@ function erode (oldHeights, adjacent, seaLevel) {
   let flux = getFlux(heights, adjacent);
   let n = heights.length;
 
-  let erosionRate = 0.01;
-  let fluxExponent = 1100 + 0.048 * n;
+  let erosionRate = 0.0125;
+  // let fluxExponent = 1100 + 0.048 * n;
+  let fluxExponent = 1e3;
 
   heights = heights.map((height, i) => {
     let underwaterDiscount = height < seaLevel ? 1e4 ** (height - seaLevel) : 1;
@@ -530,12 +531,12 @@ class TerrainGenerator {
     console.log(Date.now() - timer, 'ms');
     if (yieldPoints) return world;
 
-    const { voronoi, delaunay, centroids } = improvePoints(world.points, relaxIterations, extent);
-    // world.cells = cells;
-    // world.points = centroids;
-    world.delaunay = delaunay;
-    world.voronoi = voronoi;
-    if (yieldRelax) return world;
+    // const { voronoi, delaunay, centroids } = improvePoints(world.points, relaxIterations, extent);
+    // // world.cells = cells;
+    // // world.points = centroids;
+    // world.delaunay = delaunay;
+    // world.voronoi = voronoi;
+    // if (yieldRelax) return world;
 
     // A list of indexes such that each consecutive triplet is a triangle:
     // [i0, j0, k0, ..., in, jn, kn]

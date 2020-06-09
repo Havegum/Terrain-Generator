@@ -35,7 +35,7 @@ $: viewBox = `0 0 ${viewBoxWidth} ${viewBoxHeight}`;
 onMount(() => {
 	if (!svg) return;
 	let seed = Math.floor(Math.random() * 1e8);
-	seed = 26459687;
+	seed = 56645420;
 	console.log('seed:', seed);
 	generator = new TerrainGenerator({
 		// yieldPoints: true,
