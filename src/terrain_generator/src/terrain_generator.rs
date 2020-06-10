@@ -102,47 +102,32 @@ impl TerrainGenerator {
 
 
     fn check_poisson_sample (row: usize, col: usize, cols: usize, rows: usize, sample: &[f64; 2], grid: &Vec<Vec<[f64; 2]>> , min_offset: f64) -> bool {
-        if sample[0] < 0.05 {
-            log!(
-                "checking [{:.2}, {:.2}]  at [{}, {}] ({:02})",
-                sample[0], sample[1],
-                col, row, cols + row * cols
-            );
-        }
-
         let euclidean = |a: &[f64; 2], b: &[f64; 2]| ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt();
         'i_loop: for i in ([-1, 0, 1] as [i8; 3]).iter() {
             'j_loop: for j in ([-1, 0, 1] as [i8; 3]).iter() {
+                let neighbor_col = match i {
+                    -1 => col.checked_sub(1),
+                    1 => col.checked_add(1),
+                    _ => Some(col),
+                };
+                let neighbor_col = match neighbor_col {
+                    Some(col) => if col < cols { col } else { continue 'i_loop },
+                    None => continue 'i_loop,
+                };
 
-                let neighbor_row = match i {
+                let neighbor_row = match j {
                     -1 => row.checked_sub(1),
                     1 => row.checked_add(1),
                     _ => Some(row),
                 };
                 let neighbor_row = match neighbor_row {
-                    Some(row) => if row < rows { row } else { continue 'i_loop },
-                    None => continue 'i_loop,
-                };
-
-                let neighbor_col = match j {
-                    -1 => col.checked_sub(1),
-                    1 => col.checked_add(1),
-                    _ => Some(col),
-                };
-
-                let neighbor_col = match neighbor_col {
-                    Some(col) => if col < cols { col } else { continue 'j_loop },
+                    Some(row) => if row < rows { row } else { continue 'j_loop },
                     None => continue 'j_loop,
                 };
-                let neighbor_i = neighbor_row.wrapping_add(cols * neighbor_col);
+
+                let neighbor_i = neighbor_col.wrapping_add(cols * neighbor_row);
 
                 for neighbor in grid[neighbor_i].iter() {
-                    if sample[0] < 0.05 {
-                        log!(
-                            "    against [{:.2}, {:.2}]",
-                            neighbor[0], neighbor[1]
-                        );
-                    }
                     let dist = euclidean(&sample, neighbor);
                     if dist < min_offset {
                         return false;
@@ -150,7 +135,6 @@ impl TerrainGenerator {
                 }
             }
         }
-        if sample[0] < 0.05 { log!("Accepted!"); }
         true
     }
 
@@ -168,8 +152,8 @@ impl TerrainGenerator {
         let mut rng = || self.rng.rand::<f64>();
         let mut new_points: Vec<[f64; 2]> = vec![];
 
-        let cols = (width / size).floor() as usize;
-        let rows = (height / size).floor() as usize;
+        let cols = (width / size) as usize;
+        let rows = (height / size) as usize;
 
         for _ in 0..k {
             // Get a sample at some random angle and distance from `point`
@@ -182,8 +166,8 @@ impl TerrainGenerator {
             if 0.0 > x || 0.0 > y { continue; }
 
             let sample = [x, y];
-            let col = (x / size).floor() as usize;
-            let row = (y / size).floor() as usize;
+            let col = (x / size) as usize;
+            let row = (y / size) as usize;
 
             // If out of upper bounds, keep looking.
             if row >= rows || col >= cols { continue; }
@@ -192,7 +176,7 @@ impl TerrainGenerator {
                 continue; // Check if too close to existing samples. If point is not valid, keep looking.
             }
             // push sample in
-            grid[row + col * cols].push(sample);
+            grid[col + row * cols].push(sample);
             new_points.push(sample);
         }
 
@@ -216,10 +200,9 @@ impl TerrainGenerator {
         // Left
         for _y in 0..(height / size) as usize {
             let x = 1e-8;
-            let y = (_y as f64) * size;
+            let y = height - (_y) as f64 * size;
             let pos = [x, y];
-            let j = (y / 2.0 / size) as usize;
-            log!("coords: {}, {} -- loc: {}", x, y, j * cols);
+            let j = ((y / 2.0 / size) as usize).min(cols - 1);
             grid[j * cols].push(pos);
             active.push(pos);
             points.extend(pos.iter());
@@ -227,12 +210,11 @@ impl TerrainGenerator {
 
         // Bottom
         for _x in 0..(width / size) as usize {
-            let x = (1.0 + _x as f64) * size - 1e-8;
+            let x = (1.0 + _x as f64) * size;
             let y = height - 1e-8;
             let pos = [x, y];
-            let i = (x / size).floor().min((cols - 1) as f64);
-            let j = (rows - 1) as f64;
-            grid[i as usize + j as usize * cols].push(pos);
+            let i = ((x / 2.0 / size) as usize).min(cols - 1);
+            grid[i as usize + (rows - 1) * cols].push(pos);
             active.push(pos);
             points.extend(pos.iter());
         }
@@ -240,15 +222,13 @@ impl TerrainGenerator {
         // Right
         for _y in 0..(height / size) as usize {
             let x = width - 1e-8;
-            let y = (1.0 + _y as f64) * size - 1e-8;
+            let y = (_y as f64) * size - 1e-8;
             let pos = [x, y];
-            let i = (cols - 1) as f64;
-            let j = (y / size).floor().min((cols - 1) as f64);
-            grid[i as usize + j as usize * cols].push(pos);
+            let j = (y / 2.0 / size).floor().min((cols - 1) as f64);
+            grid[cols - 1 + j as usize * cols].push(pos);
             active.push(pos);
             points.extend(pos.iter());
         }
-
         (grid, active, points)
     }
 
@@ -280,7 +260,7 @@ impl TerrainGenerator {
         let offset_magnitude = |h: f32| if h > sea_level { h } else { 1.0 - h };
 
         while active.len() > 0 {
-            let rand_i = (self.rng.rand::<f64>() * active.len() as f64).floor() as usize;
+            let rand_i = (self.rng.rand::<f64>() * active.len() as f64) as usize;
             let point = &active[rand_i];
             let min_offset = size * offset_magnitude(self.noise_single(point[0] as f32, point[1] as f32)) as f64;
             let new_points = self.sample_poisson_points(30, size, width, height, min_offset, &point, &mut grid);
@@ -290,12 +270,12 @@ impl TerrainGenerator {
             active.remove(rand_i);
         }
 
-        points.extend(vec![
-            width, height,
-            width, 0.0,
-            0.0, height,
-            0.0, 0.0
-        ]);
+        // points.extend(vec![
+        //     width, height,
+        //     width, 0.0,
+        //     0.0, height,
+        //     0.0, 0.0
+        // ]);
         points
     }
 }
