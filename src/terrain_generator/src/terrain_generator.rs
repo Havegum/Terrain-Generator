@@ -102,6 +102,14 @@ impl TerrainGenerator {
 
 
     fn check_poisson_sample (row: usize, col: usize, cols: usize, rows: usize, sample: &[f64; 2], grid: &Vec<Vec<[f64; 2]>> , min_offset: f64) -> bool {
+        if sample[0] < 0.05 {
+            log!(
+                "checking [{:.2}, {:.2}]  at [{}, {}] ({:02})",
+                sample[0], sample[1],
+                col, row, cols + row * cols
+            );
+        }
+
         let euclidean = |a: &[f64; 2], b: &[f64; 2]| ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt();
         'i_loop: for i in ([-1, 0, 1] as [i8; 3]).iter() {
             'j_loop: for j in ([-1, 0, 1] as [i8; 3]).iter() {
@@ -111,13 +119,10 @@ impl TerrainGenerator {
                     1 => row.checked_add(1),
                     _ => Some(row),
                 };
-
                 let neighbor_row = match neighbor_row {
-                    Some(row) => row,
+                    Some(row) => if row < rows { row } else { continue 'i_loop },
                     None => continue 'i_loop,
                 };
-
-                if neighbor_row >= rows { continue 'i_loop; }
 
                 let neighbor_col = match j {
                     -1 => col.checked_sub(1),
@@ -126,13 +131,18 @@ impl TerrainGenerator {
                 };
 
                 let neighbor_col = match neighbor_col {
-                    Some(col) => col,
+                    Some(col) => if col < cols { col } else { continue 'j_loop },
                     None => continue 'j_loop,
                 };
-                if neighbor_col >= cols { continue 'j_loop; }
                 let neighbor_i = neighbor_row.wrapping_add(cols * neighbor_col);
 
                 for neighbor in grid[neighbor_i].iter() {
+                    if sample[0] < 0.05 {
+                        log!(
+                            "    against [{:.2}, {:.2}]",
+                            neighbor[0], neighbor[1]
+                        );
+                    }
                     let dist = euclidean(&sample, neighbor);
                     if dist < min_offset {
                         return false;
@@ -140,6 +150,7 @@ impl TerrainGenerator {
                 }
             }
         }
+        if sample[0] < 0.05 { log!("Accepted!"); }
         true
     }
 
@@ -188,71 +199,83 @@ impl TerrainGenerator {
         new_points
     }
 
+    fn poisson_add_borders (mut grid: Vec<Vec<[f64; 2]>>, mut active: Vec<[f64; 2]>, mut points: Vec<f64>, size: f64, cols: usize, rows: usize, width: f64, height: f64) -> (Vec<Vec<[f64; 2]>>, Vec<[f64; 2]>, Vec<f64>) {
+        let size = size / 2.0;
+
+        // Top
+        for _x in 0..(width / size) as usize {
+            let x = (_x as f64) * size;
+            let y = 1e-8;
+            let pos = [x, y];
+            let i = (x / 2.0 / size) as usize;
+            grid[i].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
+        // Left
+        for _y in 0..(height / size) as usize {
+            let x = 1e-8;
+            let y = (_y as f64) * size;
+            let pos = [x, y];
+            let j = (y / 2.0 / size) as usize;
+            log!("coords: {}, {} -- loc: {}", x, y, j * cols);
+            grid[j * cols].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
+        // Bottom
+        for _x in 0..(width / size) as usize {
+            let x = (1.0 + _x as f64) * size - 1e-8;
+            let y = height - 1e-8;
+            let pos = [x, y];
+            let i = (x / size).floor().min((cols - 1) as f64);
+            let j = (rows - 1) as f64;
+            grid[i as usize + j as usize * cols].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
+        // Right
+        for _y in 0..(height / size) as usize {
+            let x = width - 1e-8;
+            let y = (1.0 + _y as f64) * size - 1e-8;
+            let pos = [x, y];
+            let i = (cols - 1) as f64;
+            let j = (y / size).floor().min((cols - 1) as f64);
+            grid[i as usize + j as usize * cols].push(pos);
+            active.push(pos);
+            points.extend(pos.iter());
+        }
+
+        (grid, active, points)
+    }
+
     pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f32, width: f64, height: f64) -> Vec<f64> {
         let size = radius / (2 as f64).sqrt();
 
         let cols = (width / size).floor();
         let rows = (height / size).floor();
 
-        let mut grid: Vec<Vec<[f64; 2]>> = vec![vec![]; (rows * cols) as usize];
-        let mut active: Vec<[f64; 2]> = Vec::new();
-        let mut points: Vec<f64> = Vec::new();
+        let grid: Vec<Vec<[f64; 2]>> = vec![vec![]; (rows * cols) as usize];
+        let active: Vec<[f64; 2]> = Vec::new();
+        let points: Vec<f64> = Vec::new();
 
-        let x = self.rng.rand::<f64>() * width as f64;
-        let y = self.rng.rand::<f64>() * height as f64;
-        let i = (x / size).floor();
-        let j = (y / size).floor();
+        // let x = self.rng.rand::<f64>() * width as f64;
+        // let y = self.rng.rand::<f64>() * height as f64;
+        // let i = (x / size).floor();
+        // let j = (y / size).floor();
+        //
+        // let pos = [x, y];
+        // grid[(i + j * cols) as usize].push(pos);
+        // active.push(pos);
+        // points.extend(pos.iter());
 
-        let pos = [x, y];
-        grid[(i + j * cols) as usize].push(pos);
-        active.push(pos);
-        points.extend(pos.iter());
-
-        // Top
-        for _x in 0..cols as usize {
-            let x = (_x as f64) * size;
-            let y = 1e-8;
-            let pos = [x, y];
-            let i = (x / size).floor();
-            let j = (y / size).floor();
-            grid[i as usize].push(pos);
-            active.push(pos);
-            points.extend(pos.iter());
-        }
-        // Left
-        for _y in 0..rows as usize {
-            let x = 1e-8;
-            let y = (_y as f64) * size;
-            let pos = [x, y];
-            let i = (x / size).floor();
-            let j = (y / size).floor();
-            grid[(i + j * cols) as usize].push(pos);
-            active.push(pos);
-            points.extend(pos.iter());
-        }
-        // Bottom
-        for _x in 0..cols as usize {
-            let x = (1.0 + _x as f64) * size - 1e-8;
-            let y = height - 1e-8;
-            let pos = [x, y];
-            let i = (x / size).floor();
-            let j = rows - 1.0;
-            grid[(i + j * cols) as usize].push(pos);
-            active.push(pos);
-            points.extend(pos.iter());
-        }
-
-        // Right
-        for _y in 0..rows as usize {
-            let x = width - 1e-8;
-            let y = (1.0 + _y as f64) * size - 1e-8;
-            let pos = [x, y];
-            let i = cols - 1.0;
-            let j = (y / size).floor();
-            grid[(i + j * cols) as usize].push(pos);
-            active.push(pos);
-            points.extend(pos.iter());
-        }
+        let destruct = TerrainGenerator::poisson_add_borders(grid, active, points, size, cols as usize, rows as usize, width, height);
+        let mut grid = destruct.0;
+        let mut active = destruct.1;
+        let mut points = destruct.2;
 
         let offset_magnitude = |h: f32| if h > sea_level { h } else { 1.0 - h };
 
