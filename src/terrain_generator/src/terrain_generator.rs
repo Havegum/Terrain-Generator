@@ -5,6 +5,7 @@ use wasm_bindgen::prelude::*;
 use bracket_noise::prelude::*;
 use bracket_random::prelude::*;
 use std::f64::consts::PI;
+
 extern crate web_sys;
 
 #[allow(unused_macros)]
@@ -185,11 +186,14 @@ impl TerrainGenerator {
 
     fn poisson_add_borders (mut grid: Vec<Vec<[f64; 2]>>, mut active: Vec<[f64; 2]>, mut points: Vec<f64>, size: f64, cols: usize, rows: usize, width: f64, height: f64) -> (Vec<Vec<[f64; 2]>>, Vec<[f64; 2]>, Vec<f64>) {
         let size = size / 2.0;
+        let offset = 5e-2;
+        let cx = width / 2.0;
+        let cy = height / 2.0;
 
         // Top
-        for _x in 0..(width / size) as usize {
-            let x = (_x as f64) * size;
-            let y = 1e-8;
+        for _x in 0..=(width / size) as usize {
+            let x = _x as f64 * size;
+            let y = offset * -(x - cx).abs().cos();
             let pos = [x, y];
             let i = (x / 2.0 / size) as usize;
             grid[i].push(pos);
@@ -198,9 +202,9 @@ impl TerrainGenerator {
         }
 
         // Left
-        for _y in 0..(height / size) as usize {
-            let x = 1e-8;
-            let y = height - (_y) as f64 * size;
+        for _y in 0..=(height / size) as usize {
+            let y = _y as f64 * size;
+            let x = offset * -(y - cy).abs().cos();
             let pos = [x, y];
             let j = ((y / 2.0 / size) as usize).min(cols - 1);
             grid[j * cols].push(pos);
@@ -209,23 +213,23 @@ impl TerrainGenerator {
         }
 
         // Bottom
-        for _x in 0..(width / size) as usize {
-            let x = (1.0 + _x as f64) * size;
-            let y = height - 1e-8;
+        for _x in 0..=(width / size) as usize {
+            let x = _x as f64 * size;
+            let y = height + offset * (x - cx).abs().cos();
             let pos = [x, y];
             let i = ((x / 2.0 / size) as usize).min(cols - 1);
-            grid[i as usize + (rows - 1) * cols].push(pos);
+            grid[i + (rows - 1) * cols].push(pos);
             active.push(pos);
             points.extend(pos.iter());
         }
 
         // Right
-        for _y in 0..(height / size) as usize {
-            let x = width - 1e-8;
-            let y = (_y as f64) * size - 1e-8;
+        for _y in 0..=(height / size) as usize {
+            let y = _y as f64 * size;
+            let x = width + offset * (y - cy).abs().cos();
             let pos = [x, y];
-            let j = (y / 2.0 / size).floor().min((cols - 1) as f64);
-            grid[cols - 1 + j as usize * cols].push(pos);
+            let j = ((y / 2.0 / size) as usize).min(cols - 1);
+            grid[cols - 1 + j * cols].push(pos);
             active.push(pos);
             points.extend(pos.iter());
         }

@@ -56,12 +56,10 @@ struct Adjacencies {
     voronoi_cells: Vec<Vec<usize>>,
 }
 
-// #[wasm_bindgen]
 impl Voronoi {
     // Adapted from:
     //     https://github.com/d3/d3-delaunay/blob/master/src/voronoi.js
     //     https://github.com/d3/d3-delaunay/blob/master/src/delaunay.js
-    // #[wasm_bindgen(constructor)]
     pub fn new (points: Vec<f64> /*, xmin: f64, ymin: f64, xmax: f64, ymax: f64*/) -> Voronoi {
         utils::set_panic_hook();
         log!("got here, {}", points[0]);
