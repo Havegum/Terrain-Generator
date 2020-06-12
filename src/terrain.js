@@ -1,118 +1,11 @@
 import wasm from './terrain_generator/Cargo.toml';
 
-import SimplexNoise from 'simplex-noise';
-import { Delaunay } from 'd3-delaunay';
-import { randomUniform } from 'd3-random';
-import { makeRandomLanguage, makeName } from './language.js';
+// import { makeRandomLanguage, makeName } from './language.js';
 import { min, max, mean, maxIndex, minIndex } from 'd3-array';
-import { scaleLinear } from 'd3-scale';
-import seedrandom from 'seedrandom';
-
-let simplex;
-let simplexTheta;
-let simplexLength;
-let simplexResources;
-
-let rngUniform;
-
-function fractalNoise (x, y) {
-  const octaves = 8;
-  let value = 0;
-  let max = 0;
-
-  let force = 0.3;
-  let theta = simplexTheta.noise2D(x * (1 - force), y * (1 - force));
-  let length = simplexLength.noise2D(x * (1 - force), y * (1 - force));
-
-  y += Math.sin(theta) * length * force;
-  x += Math.cos(theta) * length * force;
-
-  for (let i = 0; i < octaves; i++) {
-    const weight = 1 << i; // [1, 2, 4, 8, ...] === 2 ** n
-    value += simplex.noise2D(x * weight, y * weight) / weight;
-    max += 1 / weight;
-  }
-
-  return value / max;
-}
-
-function noisyResources (points) {
-// TODO:
-// IDEA: ridge? simplex range?
-}
-
-const clamp = n => Math.max(0, Math.min(1, n));
 
 function getPointFrom (points) {
   return i => [points[2 * i], points[2 * i + 1]];
 }
-
-function getVoronoiAdjacencies (voronoi) {
-  // Do this for each point.
-  // From https://github.com/d3/d3-delaunay/blob/ffeab8a15853a7c0a2305166376d0a36d8a9f36f/src/voronoi.js#L168
-  const { circumcenters, delaunay: { inedges, halfedges, triangles } } = voronoi;
-  let adjacent = []; // Voronoi circumcenters adjacencies
-  let voronoiTriangles = []; // list of [index to centroid, index for p1, p2]
-  let voronoiPoints = []; // voronoi cell index => Array<circumcenter index>
-  let voronoiCells = []; // circumcenter index => Array<voronoi cell index>
-
-  for (let i = 0; i < inedges.length; i++) {
-    const e0 = inedges[i];
-    if (e0 === -1) return null; // coincident point
-    let e = e0;
-    let t, previousT = null;
-    voronoiPoints[i] = [];
-
-    do {
-      t = Math.floor(e / 3);
-
-      if (!adjacent[t]) adjacent[t] = [];
-      if (!voronoiCells[t]) voronoiCells[t] = [];
-      voronoiCells[t].push(i);
-      voronoiPoints[i].push(t);
-
-      // Index `t` is neighbour of the previous `t`
-      if (previousT !== null) {
-        if (!adjacent[t].includes(previousT)) adjacent[t].push(previousT);
-        if (!adjacent[previousT].includes(t)) adjacent[previousT].push(t);
-        voronoiTriangles.push(i, t, previousT);
-      }
-      previousT = t;
-
-      e = e % 3 === 2 ? e - 2 : e + 1;
-      if (triangles[e] !== i) break; // bad triangulation
-      e = halfedges[e];
-    } while (e !== e0 && e !== -1);
-    voronoiTriangles.push(i, Math.floor(e / 3), previousT);
-  }
-
-  // each element in the array is an index to circumcenters
-  // circumcenters[t * 2], circumcenters[t * 2 + 1]
-  return { voronoiAdjacency: adjacent, voronoiTriangles, voronoiPoints, voronoiCells };
-}
-
-function improvePoints (points, iterations=1, { width=1, height=1 } = {}) {
-  let centroids, polygons;
-  let extent = [0, 0, width, height];
-  // let voronoi = Delaunay.from(points).voronoi(extent);
-  let voronoi = (new Delaunay(points)).voronoi(extent);
-
-  function coordSum (sum, next) {
-    if (!sum) sum = [0, 0];
-    sum[0] += next[0];
-    sum[1] += next[1];
-    return sum;
-  }
-
-  for (let i = 0; i < iterations; i++) {
-    centroids = [...voronoi.cellPolygons()].map(hull => hull.slice(1).reduce(coordSum).map(d => d / (hull.length - 1)));
-    voronoi = Delaunay.from(centroids).voronoi(extent);
-    polygons = [...voronoi.cellPolygons()];
-  }
-
-  return { voronoi, delaunay: voronoi.delaunay, centroids, cells: polygons };
-}
-
 
 function fillBasins (heights, adjacent, seaLevel) {
   // Find all the bodies of water
@@ -396,39 +289,6 @@ function getRivers (heights, adjacent, seaLevel, voronoiCells, cellHeights) {
 }
 
 
-
-function generateResources (size) {
-  let heights = Array(size * size).fill(0);
-  let points = Array(size * size * 2).fill(0);
-  for (let i = 0; i < size * size; i++) {
-    points[i * 2 + 0] = ((i % size) / size) - 0.5;
-    points[i * 2 + 1] = (Math.floor(i / size) / size) - 0.5;
-  }
-
-  heights = noisyResources(points);
-
-  let pixels = new Uint8ClampedArray(size * size * 4);
-  for (let i = 0; i < size * size; i++) {
-    let x = i % size;
-    let y = Math.floor(i / size);
-    let val = heights[i];
-    pixels[i * 4 + 0] = Math.floor(val * 255);
-    pixels[i * 4 + 1] = Math.floor(val * 255);
-    pixels[i * 4 + 2] = Math.floor(val * 255);
-    pixels[i * 4 + 3] = 255;
-  }
-  return pixels;
-}
-
-
-function normalize (arr, get=d => d) {
-  let minValue = min(arr, get);
-  let maxValue = max(arr, get) - minValue;
-
-  return arr.map(d => (get(d) - minValue) / maxValue);
-}
-
-
 function svgRender (d) {
 	return 'M' + d.map(d => 1000 * d[0] + ',' + 1000 * d[1]).join('L') + 'Z';
 }
@@ -512,14 +372,6 @@ class TerrainGenerator {
 
     let terrainGen = this.terrainGen;
     let voronoiGen = this.voronoiGen;
-    // let [ terrainGen, voronoiGen ] = await Promise.all([this.terrainGen, this.voronoiGen]);
-    // let voronoiGen = await this.voronoiGen;
-
-    simplex = new SimplexNoise(seed);
-    simplexTheta = new SimplexNoise(seed + 'Theta');
-    simplexLength = new SimplexNoise(seed + 'Length');
-    simplexResources = new SimplexNoise(seed + 'Resources');
-    rngUniform = randomUniform.source(seedrandom(seed));
 
     let world = {};
     world.heightMap = this.generateHeightmap
@@ -527,27 +379,9 @@ class TerrainGenerator {
     let radius = Math.pow(500 / points, 0.5) / 10;
 
     let timer = Date.now();
-    world.points = terrainGen.poisson_disc_points(radius, seaLevel, extent.width, extent.height);
+    world.points = terrainGen.poissonDiscPoints(radius, seaLevel, extent.width, extent.height);
     console.log(Date.now() - timer, 'ms');
     if (yieldPoints) return world;
-
-    // const { voronoi, delaunay, centroids } = improvePoints(world.points, relaxIterations, extent);
-    // // world.cells = cells;
-    // // world.points = centroids;
-    // world.delaunay = delaunay;
-    // world.voronoi = voronoi;
-    // if (yieldRelax) return world;
-
-    // A list of indexes such that each consecutive triplet is a triangle:
-    // [i0, j0, k0, ..., in, jn, kn]
-    // where `i` is an index in `world.points` and `j, k` are indices in `world.circumcenters`
-    // let {
-    //   voronoiAdjacency,
-    //   voronoiTriangles,
-    //   voronoiPoints,
-    //   voronoiCells: voronoiCellsLookup
-    // } = getVoronoiAdjacencies(voronoi);
-
 
     timer = Date.now();
     let rustVoronoi = voronoiGen(world.points);

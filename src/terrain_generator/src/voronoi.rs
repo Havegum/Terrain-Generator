@@ -92,11 +92,9 @@ impl Voronoi {
     }
 
     fn triangulate (points: &Vec<f64>) -> Triangulation {
-        log!("triangulate called");
         let struct_points: Vec<&[f64]> = points
             .chunks_exact(2)
             .collect();
-        log!("struct thing ready, {}", points[0]);
         let struct_points = struct_points.iter()
             .map(|p| Point { x: p[0], y: p[1] })
             .collect::<Vec<_>>();
@@ -137,8 +135,8 @@ impl Voronoi {
             let dy = y2 - y1;
             let ex = x3 - x1;
             let ey = y3 - y1;
-            let bl = dx * dx + dy * dy;
-            let cl = ex * ex + ey * ey;
+            // let bl = dx * dx + dy * dy;
+            // let cl = ex * ex + ey * ey;
             let ab = (dx * ey - dy * ex) * 2.0;
 
             if ab == 0.0 {

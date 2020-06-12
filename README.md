@@ -16,7 +16,7 @@ I'm not drawing world maps, but there's probably some helpful tips here.
 
 
 ### [Amit Patel's posts are a treasure trove](http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/)
-Just [click around](https://simblob.blogspot.com/2018/08/mapgen4-goals.html) and there's a good chance you'll stumble upon neat insights about successful and not-so-successful attempts. The appendices are gold too!
+[Lots of good stuff here ...](https://simblob.blogspot.com/2018/08/mapgen4-goals.html). Remember to check the appendices as well.
 
 
 

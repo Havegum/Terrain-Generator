@@ -2,7 +2,7 @@
 import wasm from './terrain_generator/Cargo.toml';
 let extent = { width: 1, height: 1 };
 let seaLevel = 0.39;
-let radius = 2e-1;
+let radius = 8e-2;
 
 let points = [];
 let circumcenters = [];
@@ -17,7 +17,7 @@ $: viewBox = `0 0 ${viewBoxWidth} ${viewBoxHeight}`;
 wasm().then(rust => {
   let terrainGen = new rust.TerrainGenerator(1234);
 
-  points = terrainGen.poisson_disc_points(radius, seaLevel, extent.width, extent.height);
+  points = terrainGen.poissonDiscPoints(radius, seaLevel, extent.width, extent.height);
   let voronoi = rust.get_voronoi(points);
   triangles = voronoi.voronoi_triangles;
   circumcenters = voronoi.circumcenters;
@@ -98,7 +98,7 @@ svg {
 	display: block;
   border: 1px dashed blue;
 	overflow: visible;
-  transform: scale(.75);
+  transform: scale(.9);
 }
 
 </style>
