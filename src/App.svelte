@@ -15,11 +15,12 @@ let seaLevel = 0.39;
 let triangleEdges = [];
 let heights = [];
 let isLand = [];
-let cells = [];
+let points = [];
 let voronoiAdjacency = [];
 let circumcenters = [];
 let coastLines = [];
 let rivers = [];
+let riverMin = 5;
 
 let heightMap;
 let heightMapVisible = false;
@@ -35,11 +36,12 @@ $: viewBox = `0 0 ${viewBoxWidth} ${viewBoxHeight}`;
 onMount(() => {
 	if (!svg) return;
 	let seed = Math.floor(Math.random() * 1e8);
-	seed = 56645420;
+	// seed = 56645420;
+	// seed = 84701206;
 	console.log('seed:', seed);
 	generator = new TerrainGenerator({
 		// yieldPoints: true,
-		points: 2**10,
+		points: 2**12,
 		seaLevel,
 		seed
 		// seed: 82013022
@@ -62,18 +64,27 @@ function hideHeightmap() {
 	heightMapVisible = false;
 }
 
+function frame (fn) {
+	return new Promise(resolve => {
+		requestAnimationFrame(() => {
+			fn();
+			requestAnimationFrame(resolve);
+		})
+	});
+}
+
 async function generate () {
 	let world = await generator.generate();
 
-	cells = world.cells;
-	rivers = world.rivers;
 	isLand = world.isLand;
-	coastLines = world.coastLines;
 	heights = world.triangleHeights;
 	voronoiAdjacency = world.voronoiAdjacency;
 	circumcenters = world.circumcenters;
 
-	triangleEdges = Array(world.voronoiTriangles.length / 3)
+	const setRivers = () => rivers = world.rivers;
+	const setCoasts = () => coastLines = world.coastLines;
+	const setPoints = () => points = world.points;
+	const setTerrain = () => triangleEdges = Array(world.voronoiTriangles.length / 3)
 			.fill()
 			.map((_, i) => {
 				let j = i * 3;
@@ -88,7 +99,13 @@ async function generate () {
 				];
 			});
 
-	heightMap = new ImageData(await generator.generateHeightmap(100), 100, 100);
+	const setHeightmap = async () => heightMap = new ImageData(await generator.generateHeightmap(100), 100, 100);
+
+	frame(setTerrain)
+		.then(() => frame(setCoasts))
+		.then(() => frame(setRivers))
+		.then(() => frame(setHeightmap))
+		.then(() => frame(setPoints));
 }
 
 function interpolateHeight (i) {
@@ -107,6 +124,7 @@ function interpolateHeight (i) {
 	<button on:click={generate}>Generate</button>
 	<button on:mousedown={revealHeightmap} on:mouseup={hideHeightmap}>Show Heightmap</button>
 	<input type="number" bind:value={circumcenterIndex}>
+	<input type="range" min="0" max="30" step="1" bind:value={riverMin} />
 </div>
 
 <div class="wrap" bind:clientWidth={width} bind:clientHeight={height}>
@@ -122,7 +140,7 @@ function interpolateHeight (i) {
 				/>
 			{/each}
 		</g> -->
-		<g class="triangles">
+		<g class="triangles" class:active={triangleEdges.length > 0}>
 			{#each triangleEdges as edge, i}
 				<path
 					d={svgRender(edge)}
@@ -133,7 +151,7 @@ function interpolateHeight (i) {
 			{/each}
 		</g>
 
-		<g class="coast">
+		<g class="coast" class:active={coastLines.length > 0}>
 			{#each coastLines as coast}
 				<path
 					d={svgRender(coast)}
@@ -141,12 +159,12 @@ function interpolateHeight (i) {
 			{/each}
 		</g>
 
-		<g class="river">
+		<g class="river" class:active={rivers.length > 0}>
 			{#each rivers as river}
-			{#if river.flux >= 0}
+			{#if river.flux >= riverMin}
 				<path
 					d={svgRender(river.points)}
-					stroke-width={Math.log(river.flux + 1) / 2}
+					stroke-width={Math.log(river.flux + riverMin + 1) / 2}
 				/>
 			{/if}
 			{/each}
@@ -173,26 +191,26 @@ function interpolateHeight (i) {
 				/>
 			{/each}
 		{/if}
-		<!-- <g class="vertices">
-			{#each centroids as centroid}
+		<g class="vertices">
+			<!-- {#each Array(points.length / 2).fill() as _, i}
 				<rect
-					x={centroid[0] * 1000 - 1.5}
-					y={centroid[1] * 1000 - 1.5}
+					x={points[i * 2 + 0] * 1000 - 1.5}
+					y={points[i * 2 + 1] * 1000 - 1.5}
 					width="3"
 					height="3"
 					fill="none"
-					stroke="white"
+					stroke="cyan"
 				/>
-			{/each}
+			{/each} -->
 
-			{#each nodes as node}
+			<!-- {#each nodes as node}
 				<circle
 					cx={node[0] * 1000}
 					cy={node[1] * 1000}
 					r="1.5"
 				/>
-			{/each}
-		</g> -->
+			{/each} -->
+		</g>
 	</svg>
 </div>
 
@@ -233,6 +251,15 @@ canvas.visible {
 
 .triangles path {
 	stroke-width: 1;
+}
+
+.triangles, .coast, .river {
+	opacity: 0;
+	transition: opacity 500ms;
+}
+
+.active {
+	opacity: 1;
 }
 
 .coast path,

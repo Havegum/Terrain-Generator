@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 use super::utils;
 use super::poisson;
 use super::noise::Noise;
+use super::voronoi::Voronoi;
 
 extern crate web_sys;
 
@@ -37,6 +38,7 @@ impl TerrainGenerator {
 
 
     pub fn fractal_noise (&self, x: f64, y: f64) -> f64 {
+        // TODO: move to `noise.rs`
         let force = 0.25; // magic
         let wavyness = 5e-1; // magic
 
@@ -70,6 +72,12 @@ impl TerrainGenerator {
     #[wasm_bindgen(js_name = poissonDiscPoints)]
     pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> Vec<f64> {
         poisson::disc_sample(radius, sea_level, width, height, self)
+    }
+
+    pub fn world (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> JsValue {
+        let points = self.poisson_disc_points(radius, sea_level, width, height);
+        let voronoi = Voronoi::new(points);
+        JsValue::from_serde(&voronoi).unwrap()
     }
 
 

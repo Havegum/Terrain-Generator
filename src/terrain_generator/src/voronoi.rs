@@ -4,7 +4,6 @@ use delaunator::{EMPTY, Point, triangulate, Triangulation};
 #[path = "utils.rs"]
 mod utils;
 
-
 extern crate web_sys;
 
 #[allow(unused_macros)]
@@ -62,7 +61,6 @@ impl Voronoi {
     //     https://github.com/d3/d3-delaunay/blob/master/src/delaunay.js
     pub fn new (points: Vec<f64> /*, xmin: f64, ymin: f64, xmax: f64, ymax: f64*/) -> Voronoi {
         utils::set_panic_hook();
-        log!("got here, {}", points[0]);
         let Triangulation { triangles, halfedges, hull } = Voronoi::triangulate(&points);
         let inedges = Voronoi::get_inedges(&points, &halfedges, &triangles);
         let neighbors = Voronoi::get_neighbors(&points, &inedges, &hull, &halfedges, &triangles);
@@ -210,7 +208,6 @@ impl Voronoi {
     }
 
     fn get_neighbors (points: &Vec<f64>, inedges: &Vec<usize>, hull: &Vec<usize>, halfedges: &Vec<usize>, triangles: &Vec<usize>) -> Vec<Vec<usize>> {
-        log!("points.len(): {}", points.len());
         let mut neighbors = vec![Vec::new(); points.len() / 2];
         let mut hull_index = vec![EMPTY; points.len() / 2];
         for i in 0..hull.len() { hull_index[hull[i]] = i; }

@@ -21,8 +21,6 @@ pub fn disc_sample (
     // Stuff
 
     let size = radius / (2.0_f64).sqrt();
-    log!("{}", sea_level);
-
     let cols = (width / size) as usize;
     let rows = (height / size) as usize;
 
@@ -35,7 +33,16 @@ pub fn disc_sample (
     let mut active = destruct.1;
     let mut points = destruct.2;
 
-    let offset_magnitude = |h: f64| {
+    let x = gen.noise.rng() * width;
+    let y = gen.noise.rng() * height;
+    let sample = [x, y];
+    let col = (x / size) as usize;
+    let row = (y / size) as usize;
+    grid[col + row * cols].push(sample);
+    active.push(sample);
+    points.extend(sample.iter());
+
+    let offset_magnitude = |h| {
         let n = if h > sea_level { h } else { 1.0 - h };
         n
     };

@@ -378,15 +378,9 @@ class TerrainGenerator {
 
     let radius = Math.pow(500 / points, 0.5) / 10;
 
-    let timer = Date.now();
-    world.points = terrainGen.poissonDiscPoints(radius, seaLevel, extent.width, extent.height);
-    console.log(Date.now() - timer, 'ms');
-    if (yieldPoints) return world;
+    let rustVoronoi = terrainGen.world(radius, seaLevel, extent.width, extent.height);
 
-    timer = Date.now();
-    let rustVoronoi = voronoiGen(world.points);
-    console.log(Date.now() - timer, 'ms');
-    console.log(rustVoronoi);
+    world.points = rustVoronoi.delaunay.points;
     let circumcenters = world.circumcenters = rustVoronoi.circumcenters;
     let voronoiAdjacency = rustVoronoi.adjacent;
     let voronoiTriangles = rustVoronoi.voronoi_triangles;
