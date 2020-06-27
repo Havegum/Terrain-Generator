@@ -57,4 +57,17 @@ impl Noise {
     pub fn rng (&mut self) -> f64 {
         self.uniform.rand::<f64>()
     }
+
+    pub fn fractal_noise (&self, x: f64, y: f64) -> f64 {
+        let force = 0.25; // magic
+        let wavyness = 5e-1; // magic
+
+        let theta = self.theta(x * force, y * force);
+        let length = self.offset(x * force, y * force);
+
+        let x = x + theta.cos() * length * wavyness;
+        let y = y + theta.sin() * length * wavyness;
+
+        self.height(x, y)
+    }
 }

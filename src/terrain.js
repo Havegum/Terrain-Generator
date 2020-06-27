@@ -156,7 +156,7 @@ function fillSinks (heights, adjacent, seaLevel, epsilon=1e-5) {
   // Mewo implementation details: https://mewo2.com/notes/terrain/
   // Original paper: https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/sous_copyright/010031925.pdf
 
-  // All non-deepwater tiles start with infinite heights.
+  // All non-water tiles start with infinite heights.
   let newHeights = heights.map(height => height > seaLevel ? Infinity : height);
 
   // ascending
@@ -166,6 +166,7 @@ function fillSinks (heights, adjacent, seaLevel, epsilon=1e-5) {
 
   let changed = true;
   while (changed) {
+    console.log("sinkfill");
     changed = false;
 
     for (let k = 0; k < sorted.length; k++) {
@@ -281,7 +282,7 @@ function getRivers (heights, adjacent, seaLevel, voronoiCells, cellHeights) {
 
   rivers = rivers
     .map((_, i) => ({ flux: flux[i], i }))
-    .filter((_, i) => voronoiCells[i].every(c => cellHeights[c] >= seaLevel))
+    .filter((_, i) => voronoiCells[i].filter(c => cellHeights[c] >= seaLevel).length > 1)
     .map(findSlope)
     .filter(o => !o.bad);
 
@@ -322,19 +323,19 @@ class TerrainGenerator {
     );
   }
 
-  async fractalNoise (x, y) {
-    await this.wasm;
-    return this.terrainGen.fractal_noise(x, y);
-  }
+  // async fractalNoise (x, y) {
+  //   await this.wasm;
+  //   return this.terrainGen.fractal_noise(x, y);
+  // }
 
-  async noiseHeight (x, y, { min=-1, max=1 }={}) {
-    await this.wasm;
-    return this.terrainGen.noise_single(x, y);
-  }
+  // async noiseHeight (x, y, { min=-1, max=1 }={}) {
+  //   await this.wasm;
+  //   return this.terrainGen.noise_single(x, y);
+  // }
 
   async noisyHeights (points, heights) {
     await this.wasm;
-    return Array.from(this.terrainGen.noise_array(points, heights));
+    return Array.from(this.terrainGen.heightmap(points, heights));
   }
 
   async generateHeightmap (size) {
@@ -345,7 +346,6 @@ class TerrainGenerator {
       points[i * 2 + 1] = (Math.floor(i / size) / size);// - 0.5;
     }
     heights = await this.noisyHeights(points, heights);
-    heights = plateau(points, heights);
 
     let pixels = new Uint8ClampedArray(size * size * 4);
     for (let i = 0; i < size * size; i++) {
@@ -378,41 +378,17 @@ class TerrainGenerator {
 
     let radius = Math.pow(500 / points, 0.5) / 10;
 
-    let rustVoronoi = terrainGen.world(radius, seaLevel, extent.width, extent.height);
+    let { voronoi: rustVoronoi, heights, cellHeights } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
 
-    world.points = rustVoronoi.delaunay.points;
-    let circumcenters = world.circumcenters = rustVoronoi.circumcenters;
-    let voronoiAdjacency = rustVoronoi.adjacent;
-    let voronoiTriangles = rustVoronoi.voronoi_triangles;
-    let voronoiPoints = rustVoronoi.voronoi_points;
-    let voronoiCellsLookup = rustVoronoi.voronoi_cells;
-    let neighbors = rustVoronoi.delaunay.neighbors;
-
-    world.voronoiAdjacency = voronoiAdjacency;
-    world.voronoiTriangles = voronoiTriangles;
-    world.voronoiPoints = voronoiPoints;
-
-    // Noise, then plateau
-    world.heights = Array(circumcenters.length / 2).fill(0);
-    world.heights = await this.noisyHeights(circumcenters, world.heights);
-    world.heights = plateau(circumcenters, world.heights);
-    // world.heights = fillBasins(world.heights, voronoiAdjacency, seaLevel);
-
-    //  Erode `n` times
-    for (let i = 0; i < 10; i++) {
-      world.heights = erode(world.heights, voronoiAdjacency, seaLevel);
-    }
-
-
-    // Propagate heights to voronoi centers
-    const getNodeCoordinates = getPointFrom(circumcenters);
-    world.nodes = Array(circumcenters.length / 2)
-      .fill()
-      .map((_, i) => getNodeCoordinates(i));
-
-
-    world.cellHeights = Array(world.points.length / 2).fill(0)
-      .map(getCellHeight(world.heights, voronoiPoints))
+    world.heights = heights;
+    world.cellHeights = cellHeights;
+    world.points                                    = rustVoronoi.delaunay.points;
+    let circumcenters      = world.circumcenters    = rustVoronoi.circumcenters;
+    let voronoiAdjacency   = world.voronoiAdjacency = rustVoronoi.adjacent;
+    let voronoiTriangles   = world.voronoiTriangles = rustVoronoi.voronoi_triangles;
+    let voronoiPoints      = world.voronoiPoints    = rustVoronoi.voronoi_points;
+    let voronoiCellsLookup                          = rustVoronoi.voronoi_cells;
+    let neighbors /*  ~  a e s t h e t i c s  ~  */ = rustVoronoi.delaunay.neighbors;
 
     // Calculate triangle heights (such that each triangle is over/under seaLevel as its respective cell)
     world.triangleHeights = Array(voronoiTriangles.length / 3).fill()

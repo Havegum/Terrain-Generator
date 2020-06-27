@@ -44,10 +44,6 @@ pub struct Delaunay {
 }
 
 // From `../../terrain.js`
-// let adjacent = []; // Voronoi circumcenters adjacencies
-// let voronoiTriangles = []; // list of [index to centroid, index for p1, p2]
-// let voronoiPoints = []; // voronoi cell index => Array<circumcenter index>
-// let voronoiCells = []; // circumcenter index => Array<voronoi cell index>
 struct Adjacencies {
     adjacent: Vec<Vec<usize>>,
     voronoi_triangles: Vec<usize>,
@@ -176,7 +172,7 @@ impl Voronoi {
             let mut previous_t = EMPTY;
 
             loop {
-                t = e / 3; // Floors automatically because of usize type
+                t = e / 3;
                 voronoi_cells[t].push(i);
                 voronoi_points[i].push(t);
 

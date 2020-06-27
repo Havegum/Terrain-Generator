@@ -1,5 +1,7 @@
 use wasm_bindgen::prelude::*;
 
+use std::collections::HashSet;
+
 use super::utils;
 use super::poisson;
 use super::noise::Noise;
@@ -15,16 +17,23 @@ macro_rules! log {
 }
 
 
-#[wasm_bindgen]
+#[derive(Serialize)]
+pub struct World {
+    voronoi: Voronoi,
+    heights: Vec<f64>,
+    #[serde(rename="cellHeights")]
+    cell_heights: Vec<f64>,
+}
+
+// #[wasm_bindgen]
 pub struct TerrainGenerator {
-    #[wasm_bindgen(skip)]
+    // #[wasm_bindgen(skip)]
     pub noise: Noise
 }
 
-#[wasm_bindgen]
+// #[wasm_bindgen]
 impl TerrainGenerator {
-
-    #[wasm_bindgen(constructor)]
+    // #[wasm_bindgen(constructor)]
     pub fn new (seed: Option<u32>) -> TerrainGenerator {
         utils::set_panic_hook();
 
@@ -36,215 +45,264 @@ impl TerrainGenerator {
         TerrainGenerator { noise: Noise::new(seed) }
     }
 
-
-    pub fn fractal_noise (&self, x: f64, y: f64) -> f64 {
-        // TODO: move to `noise.rs`
-        let force = 0.25; // magic
-        let wavyness = 5e-1; // magic
-
-        let theta = self.noise.theta(x * force, y * force);
-        let length = self.noise.offset(x * force, y * force);
-
-        let x = x + theta.cos() * length * wavyness;
-        let y = y + theta.sin() * length * wavyness;
-
-        self.noise.height(x, y)
-    }
-
-
     pub fn noise_single (&self, x: f64, y: f64) -> f64 {
-        (self.fractal_noise(x, y) + 1.0) / 2.0
+        (self.noise.fractal_noise(x, y) + 1.) / 2.
     }
 
-    pub fn noise_array (&self, points: Vec<f64>, heights: Option<Vec<f64>>) -> Vec<f64> {
+    // #[wasm_bindgen(js_name="heightmap")]
+    pub fn heightmap_js (&self, points: Vec<f64>, heights: Option<Vec<f64>>) -> Vec<f64> {
+        let heights = self.noise_array(&points, heights);
+        TerrainGenerator::plateau(&points, heights)
+    }
+
+    fn noise_array (&self, points: &Vec<f64>, heights: Option<Vec<f64>>) -> Vec<f64> {
         let heights = match heights {
-            None => vec![0.1, 0.2, 0.3],
+            None => vec![0.; points.len() / 2],
             Some(heights) => heights,
         };
+
+        let noise = |(i, height)| height + self.noise_single(points[i * 2], points[i * 2 + 1]);
 
         heights
             .iter()
             .enumerate()
-            .map(|(i, height)| height + self.noise_single(points[i * 2], points[i * 2 + 1]))
+            .map(noise)
             .collect()
     }
 
-    #[wasm_bindgen(js_name = poissonDiscPoints)]
-    pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> Vec<f64> {
-        poisson::disc_sample(radius, sea_level, width, height, self)
+
+    fn plateau (points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
+        let plateau_start = 0.45; // Magic
+        let plateau_cap = (1. - plateau_start) / 4.; // Magic
+
+        let mut peak_index = 0;
+        for (j, &height) in heights.iter().enumerate() {
+            if height > heights[peak_index] { peak_index = j; }
+        }
+        let peak_x = points[peak_index * 2 + 0];
+        let peak_y = points[peak_index * 2 + 1];
+
+        let interpolate = |i: f64| {
+            plateau_start + (1. - (1. - (i - plateau_start) / (1. - plateau_start)).powi(2)) * plateau_cap
+        };
+
+        for i in 0..heights.len() {
+            let height = heights[i];
+
+            let x = points[i * 2 + 0];
+            let y = points[i * 2 + 1];
+
+            let distance_to_peak = ((x - peak_x).hypot(y - peak_y).min(0.5) / 0.5).powi(2);
+            heights[i] = (1. - distance_to_peak) * height + distance_to_peak * interpolate(height);
+        }
+
+        heights
+    }
+
+    fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
+        let heights = TerrainGenerator::fill_sinks(heights, adjacent, sea_level);
+
+        let flux = TerrainGenerator::get_flux(&heights, adjacent);
+        let n = heights.len() as f64;
+
+        let erosion_rate = 0.0125;
+        let flux_exponent = 1e3 as i32;
+
+        let erosion = |(i, height): (usize, f64)| {
+            let underwater_discount = if height < sea_level
+                { 1e4_f64.powf(height - sea_level) } else { 1. };
+            let point_flux = 1. - (1. - flux[i] / n).powi(flux_exponent);
+            height - point_flux * point_flux * erosion_rate * underwater_discount
+        };
+
+        heights
+            .into_iter()
+            .enumerate()
+            .map(erosion)
+            .collect::<Vec<f64>>()
+    }
+
+
+    fn fill_sinks (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
+        // Mewo implementation details: https://mewo2.com/notes/terrain/
+        // Original paper: https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/sous_copyright/010031925.pdf
+        let epsilon = 1e-5;
+
+        let mut new_heights: Vec<f64> = heights
+            .clone()
+            .iter()
+            .map(|&height| if height > sea_level { f64::INFINITY } else { height })
+            .collect();
+
+        let mut sorted: Vec<(usize, f64)> = heights
+            .clone()
+            .into_iter()
+            .enumerate()
+            .collect();
+        sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
+
+        let mut changed = true;
+        while changed {
+            changed = false;
+
+            for &(i, height) in sorted.iter() {
+                if new_heights[i] == height { continue; }
+
+                let neighbors = &adjacent[i];
+                for &neighbor in neighbors.iter() {
+                    let other = new_heights[neighbor] + epsilon;
+
+                    if height >= other {
+                        new_heights[i] = height;
+                        changed = true;
+                        break;
+                    }
+
+                    if new_heights[i] > other && other > height {
+                        new_heights[i] = other;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        new_heights
+    }
+
+    fn get_flux (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
+        let mut flux = vec![0.; heights.len()];
+
+        let mut sorted = heights
+            .clone()
+            .into_iter()
+            .enumerate()
+            .collect::<Vec<(usize, f64)>>();
+        sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
+
+        // find downhill for each point.
+        for &(k, height) in sorted.iter().rev() {
+            let neighbors = &adjacent[k];
+
+            let mut lowest:Option<usize> = None;
+            for &n in neighbors.iter() {
+                if heights[n] < height {
+                    lowest = Some(match lowest {
+                        Some(low) => if heights[n] < heights[low] { n } else { low },
+                        None => n,
+                    });
+                }
+            }
+            if let Some(neighbor) = lowest {
+                flux[neighbor] = flux[neighbor] + flux[k] + 1.;
+            }
+        }
+        flux
+    }
+
+    fn get_cell_heights (n: usize, heights: &Vec<f64>, voronoi_points: &Vec<Vec<usize>>) -> Vec<f64> {
+        let mut cell_heights = vec![0.; n];
+        for i in 0..n {
+            let points = &voronoi_points[i];
+            cell_heights[i] = points
+                .iter()
+                .map(|&n| heights[n])
+                .sum::<f64>() / points.len() as f64;
+        }
+        cell_heights
+    }
+
+    fn get_river (
+        heights: &Vec<f64>,
+        adjacent: &Vec<Vec<usize>>,
+        flux: &Vec<f64>,
+        sea_level: f64,
+        voronoi_cells: &Vec<Vec<usize>>,
+        cell_heights: &Vec<f64>,
+        visited: &mut HashSet<usize>,
+        i: usize,
+        height: f64,
+        river: Vec<(usize, f64)>
+    ) -> (Vec<(usize, f64)>, Vec<Vec<(usize, f64)>>)
+    {
+        visited.insert(i);                 // Whatever happens next, mark this node as visited
+        if heights[i] < sea_level { return (river, Vec::new()); } // If we're undersea, continue.
+
+        river.push((i, flux[i]));          // Include this node to the main river
+        let mut tributaries: Vec<Vec<(usize, f64)>> = Vec::new();  // Find rivers that run into this one.
+        let mut main_branch_found = false;
+
+        // Check all neighbors by flux order
+        let mut neighbors = adjacent[i].clone();
+        neighbors.sort_unstable_by(|&a, &b| flux[a].partial_cmp(&flux[b]).unwrap());
+        for &neighbor in neighbors.iter().rev() {
+            if visited.contains(&neighbor) { continue }
+            if heights[i] > adjacent[neighbor].iter().map(|&a| heights[a]).fold(f64::INFINITY, |a, b| a.min(b)) {
+                continue // if there exists a lower neighbor for this neighbor, skip
+            }
+
+            // Otherwise, continue recursion for either main branch or tributaries
+            if !main_branch_found {
+                main_branch_found = true;
+                let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], river);
+                river = tuple.0;
+                tributaries.extend(&mut tuple.1.iter());
+
+            } else {
+                let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], Vec::new());
+                tributaries.push(tuple.0);
+                tributaries.extend(&mut tuple.1.iter());
+
+            }
+        }
+
+        (river, tributaries)
+    }
+
+    fn get_rivers (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64, voronoi_cells: &Vec<Vec<usize>>, cell_heights: &Vec<f64>) -> Vec<Vec<(usize, f64)>> {
+        let flux = TerrainGenerator::get_flux(heights, adjacent);
+        let mut sorted = heights
+            .clone()
+            .into_iter()
+            .enumerate()
+            .collect::<Vec<(usize, f64)>>();
+        sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
+
+        let mut visited = HashSet::new();
+        let mut rivers: Vec<Vec<(usize, f64)>> = Vec::new();
+
+        for &(i, height) in sorted.iter() {
+            if visited.contains(&i) { continue }
+            let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, i, height, Vec::new());
+            rivers.push(&tuple.0);
+            rivers.extend(&tuple.1.iter());
+        }
+
+        rivers
     }
 
     pub fn world (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> JsValue {
-        let points = self.poisson_disc_points(radius, sea_level, width, height);
+        log!("`world` called");
+        let points = poisson::disc_sample(radius, sea_level, width, height, self);
+        log!(" ✓ points poissoned");
         let voronoi = Voronoi::new(points);
-        JsValue::from_serde(&voronoi).unwrap()
+        log!(" ✓ voronoi triangulated");
+
+        let heights = self.noise_array(&voronoi.circumcenters, None);
+        log!(" ✓ heights noised");
+        let mut heights = TerrainGenerator::plateau(&voronoi.circumcenters, heights);
+        log!(" ·  ✓ and plateaued");
+
+        for _ in 0..10 {
+            heights = TerrainGenerator::erode(heights, &voronoi.adjacent, sea_level);
+        }
+        log!(" ·  ✓ and eroded ×10");
+
+        let cell_heights = TerrainGenerator::get_cell_heights(voronoi.delaunay.points.len() / 2, &heights, &voronoi.voronoi_points);
+        log!(" ✓ cell heights calculated");
+
+        let rivers = TerrainGenerator::get_rivers(&heights, &voronoi.adjacent, sea_level, &voronoi.voronoi_cells, &cell_heights);
+
+        let world = World { voronoi, heights, cell_heights };
+        JsValue::from_serde(&world).unwrap()
     }
-
-
-    // fn check_poisson_sample (row: usize, col: usize, cols: usize, rows: usize, sample: &[f64; 2], grid: &Vec<Vec<[f64; 2]>>, min_offset: f64) -> bool {
-    //     let euclidean = |a: &[f64; 2], b: &[f64; 2]| ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt();
-    //     'i_loop: for i in ([-1, 0, 1] as [i8; 3]).iter() {
-    //         'j_loop: for j in ([-1, 0, 1] as [i8; 3]).iter() {
-    //             let neighbor_col = match i {
-    //                 -1 => col.checked_sub(1),
-    //                 1 => col.checked_add(1),
-    //                 _ => Some(col),
-    //             };
-    //             let neighbor_col = match neighbor_col {
-    //                 Some(col) => if col < cols { col } else { continue 'i_loop },
-    //                 None => continue 'i_loop,
-    //             };
-    //
-    //             let neighbor_row = match j {
-    //                 -1 => row.checked_sub(1),
-    //                 1 => row.checked_add(1),
-    //                 _ => Some(row),
-    //             };
-    //             let neighbor_row = match neighbor_row {
-    //                 Some(row) => if row < rows { row } else { continue 'j_loop },
-    //                 None => continue 'j_loop,
-    //             };
-    //
-    //             let neighbor_i = neighbor_col.wrapping_add(cols * neighbor_row);
-    //
-    //             for neighbor in grid[neighbor_i].iter() {
-    //                 let dist = euclidean(&sample, neighbor);
-    //                 if dist < min_offset {
-    //                     return false;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     true
-    // }
-
-    // fn sample_poisson_points (
-    //     &mut self,
-    //     k: usize,
-    //     size: f64,
-    //     width: f64,
-    //     height: f64,
-    //     min_offset: f64,
-    //     point: &[f64; 2],
-    //     grid: &mut Vec<Vec<[f64; 2]>>,
-    // ) -> Vec<[f64; 2]>
-    // {
-    //     let mut rng = || self.noise.rng();
-    //     let mut new_points: Vec<[f64; 2]> = vec![];
-    //
-    //     let cols = (width / size) as usize;
-    //     let rows = (height / size) as usize;
-    //
-    //     for _ in 0..k {
-    //         // Get a sample at some random angle and distance from `point`
-    //         let theta = rng() * PI * 2.0;
-    //         let offset = size + rng() * min_offset;
-    //         let x = point[0] + theta.cos() * offset;
-    //         let y = point[1] + theta.sin() * offset;
-    //
-    //         // If out of lower bounds, keep looking.
-    //         if 0.0 > x || 0.0 > y { continue; }
-    //
-    //         let sample = [x, y];
-    //         let col = (x / size) as usize;
-    //         let row = (y / size) as usize;
-    //
-    //         // If out of upper bounds, keep looking.
-    //         if row >= rows || col >= cols { continue; }
-    //
-    //         if TerrainGenerator::check_poisson_sample(row, col, cols, rows, &sample, &grid, min_offset) == false {
-    //             continue; // Check if too close to existing samples. If point is not valid, keep looking.
-    //         }
-    //         // push sample in
-    //         grid[col + row * cols].push(sample);
-    //         new_points.push(sample);
-    //     }
-    //
-    //     new_points
-    // }
-
-    // fn poisson_add_borders (mut grid: Vec<Vec<[f64; 2]>>, mut active: Vec<[f64; 2]>, mut points: Vec<f64>, size: f64, cols: usize, rows: usize, width: f64, height: f64) -> (Vec<Vec<[f64; 2]>>, Vec<[f64; 2]>, Vec<f64>) {
-    //     let size = size / 2.0;
-    //     let offset = 5e-2;
-    //     let cx = width / 2.0;
-    //     let cy = height / 2.0;
-    //
-    //     // Top
-    //     for _x in 0..=(width / size) as usize {
-    //         let x = _x as f64 * size;
-    //         let y = offset * -(x - cx).abs().cos();
-    //         let pos = [x, y];
-    //         let i = (x / 2.0 / size) as usize;
-    //         grid[i].push(pos);
-    //         active.push(pos);
-    //         points.extend(pos.iter());
-    //     }
-    //
-    //     // Left
-    //     for _y in 0..=(height / size) as usize {
-    //         let y = _y as f64 * size;
-    //         let x = offset * -(y - cy).abs().cos();
-    //         let pos = [x, y];
-    //         let j = ((y / 2.0 / size) as usize).min(cols - 1);
-    //         grid[j * cols].push(pos);
-    //         active.push(pos);
-    //         points.extend(pos.iter());
-    //     }
-    //
-    //     // Bottom
-    //     for _x in 0..=(width / size) as usize {
-    //         let x = _x as f64 * size;
-    //         let y = height + offset * (x - cx).abs().cos();
-    //         let pos = [x, y];
-    //         let i = ((x / 2.0 / size) as usize).min(cols - 1);
-    //         grid[i + (rows - 1) * cols].push(pos);
-    //         active.push(pos);
-    //         points.extend(pos.iter());
-    //     }
-    //
-    //     // Right
-    //     for _y in 0..=(height / size) as usize {
-    //         let y = _y as f64 * size;
-    //         let x = width + offset * (y - cy).abs().cos();
-    //         let pos = [x, y];
-    //         let j = ((y / 2.0 / size) as usize).min(cols - 1);
-    //         grid[cols - 1 + j * cols].push(pos);
-    //         active.push(pos);
-    //         points.extend(pos.iter());
-    //     }
-    //     (grid, active, points)
-    // }
-
-    // pub fn poisson_disc_points (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> Vec<f64> {
-    //     poisson::disc_sample(radius, sea_level, width, height, &mut self.noise)
-        // let size = radius / (2 as f64).sqrt();
-        //
-        // let cols = (width / size).floor();
-        // let rows = (height / size).floor();
-        //
-        // let grid: Vec<Vec<[f64; 2]>> = vec![vec![]; (rows * cols) as usize];
-        // let active: Vec<[f64; 2]> = Vec::new();
-        // let points: Vec<f64> = Vec::new();
-        //
-        //
-        // let destruct = TerrainGenerator::poisson_add_borders(grid, active, points, size, cols as usize, rows as usize, width, height);
-        // let mut grid = destruct.0;
-        // let mut active = destruct.1;
-        // let mut points = destruct.2;
-        //
-        // let offset_magnitude = |h: f32| if h > sea_level { h } else { 1.0 - h };
-        //
-        // while active.len() > 0 {
-        //     let rand_i = (self.rng.rand::<f64>() * active.len() as f64) as usize;
-        //     let point = &active[rand_i];
-        //     let min_offset = size * offset_magnitude(self.noise_single(point[0] as f32, point[1] as f32)) as f64;
-        //     let new_points = self.sample_poisson_points(30, size, width, height, min_offset, &point, &mut grid);
-        //
-        //     for sample in new_points.iter() { points.extend(sample.iter()); }
-        //     active.extend(new_points.iter());
-        //     active.remove(rand_i);
-        // }
-        //
-        // points
-    // }
 }

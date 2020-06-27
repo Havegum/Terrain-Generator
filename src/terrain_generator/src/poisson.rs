@@ -36,8 +36,8 @@ pub fn disc_sample (
     let x = gen.noise.rng() * width;
     let y = gen.noise.rng() * height;
     let sample = [x, y];
-    let col = (x / size) as usize;
-    let row = (y / size) as usize;
+    let col = ((x / size) as usize).min(cols - 1);
+    let row = ((y / size) as usize).min(rows - 1);
     grid[col + row * cols].push(sample);
     active.push(sample);
     points.extend(sample.iter());
@@ -72,7 +72,6 @@ fn sample_poisson_points (
     gen: &mut TerrainGenerator,
 ) -> Vec<[f64; 2]>
 {
-    // let mut rng = || self.rng.rand::<f64>();
     let mut new_points: Vec<[f64; 2]> = vec![];
 
     let cols = (width / size) as usize;
@@ -108,6 +107,7 @@ fn sample_poisson_points (
 
 fn check_sample (row: usize, col: usize, cols: usize, rows: usize, sample: &[f64; 2], grid: &Vec<Vec<[f64; 2]>>, min_offset: f64) -> bool {
     let euclidean = |a: &[f64; 2], b: &[f64; 2]| ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt();
+
     'i_loop: for i in ([-1, 0, 1] as [i8; 3]).iter() {
         'j_loop: for j in ([-1, 0, 1] as [i8; 3]).iter() {
             let neighbor_col = match i {

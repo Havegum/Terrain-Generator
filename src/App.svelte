@@ -20,7 +20,7 @@ let voronoiAdjacency = [];
 let circumcenters = [];
 let coastLines = [];
 let rivers = [];
-let riverMin = 5;
+let riverMin = 0;
 
 let heightMap;
 let heightMapVisible = false;
@@ -37,11 +37,11 @@ onMount(() => {
 	if (!svg) return;
 	let seed = Math.floor(Math.random() * 1e8);
 	// seed = 56645420;
-	// seed = 84701206;
+	// seed = 82306550;
 	console.log('seed:', seed);
 	generator = new TerrainGenerator({
 		// yieldPoints: true,
-		points: 2**12,
+		points: 2**10,
 		seaLevel,
 		seed
 		// seed: 82013022
@@ -69,7 +69,7 @@ function frame (fn) {
 		requestAnimationFrame(() => {
 			fn();
 			requestAnimationFrame(resolve);
-		})
+		});
 	});
 }
 
@@ -123,8 +123,7 @@ function interpolateHeight (i) {
 
 	<button on:click={generate}>Generate</button>
 	<button on:mousedown={revealHeightmap} on:mouseup={hideHeightmap}>Show Heightmap</button>
-	<input type="number" bind:value={circumcenterIndex}>
-	<input type="range" min="0" max="30" step="1" bind:value={riverMin} />
+ 	<input type="range" min="0" max="30" step="1" bind:value={riverMin} /> I like rivers {riverMin < 10 ? "a lot <3" : riverMin < 20 ? "a bit." : "gone!"}
 </div>
 
 <div class="wrap" bind:clientWidth={width} bind:clientHeight={height}>
@@ -151,13 +150,6 @@ function interpolateHeight (i) {
 			{/each}
 		</g>
 
-		<g class="coast" class:active={coastLines.length > 0}>
-			{#each coastLines as coast}
-				<path
-					d={svgRender(coast)}
-				/>
-			{/each}
-		</g>
 
 		<g class="river" class:active={rivers.length > 0}>
 			{#each rivers as river}
@@ -167,6 +159,15 @@ function interpolateHeight (i) {
 					stroke-width={Math.log(river.flux + riverMin + 1) / 2}
 				/>
 			{/if}
+			{/each}
+		</g>
+
+
+		<g class="coast" class:active={coastLines.length > 0}>
+			{#each coastLines as coast}
+				<path
+					d={svgRender(coast)}
+				/>
 			{/each}
 		</g>
 
@@ -281,5 +282,15 @@ canvas.visible {
 .slopes line {
 	stroke: black;
 	stroke-width: 1;
+}
+
+.control-panel {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.control-panel * {
+	margin-right: 1em;
 }
 </style>
