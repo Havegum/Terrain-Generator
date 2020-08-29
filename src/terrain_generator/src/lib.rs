@@ -11,5 +11,6 @@ extern crate serde_derive;
 mod utils;
 mod poisson;
 mod noise;
-pub mod terrain_generator;
+mod erosion;
 mod voronoi;
+pub mod terrain_generator;

@@ -1,4 +1,4 @@
-use wasm_bindgen::prelude::*;
+// use wasm_bindgen::prelude::*;
 use delaunator::{EMPTY, Point, triangulate, Triangulation};
 
 #[path = "utils.rs"]
@@ -16,11 +16,11 @@ macro_rules! log {
 // Implement _init from here:
 // https://github.com/d3/d3-delaunay/blob/master/src/voronoi.js
 
-#[wasm_bindgen]
-pub fn get_voronoi (points: Vec<f64>) -> JsValue {
-    log!("get_voronoi {}", points.len());
-    JsValue::from_serde(&Voronoi::new(points)).unwrap()
-}
+// #[wasm_bindgen]
+// pub fn get_voronoi (points: Vec<f64>) -> JsValue {
+//     log!("get_voronoi {}", points.len());
+//     JsValue::from_serde(&Voronoi::new(points)).unwrap()
+// }
 
 #[derive(Serialize)]
 pub struct Voronoi {
