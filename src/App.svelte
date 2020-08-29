@@ -22,6 +22,8 @@ let coastLines = [];
 let rivers = [];
 let riverMin = 0;
 
+$: console.log(rivers)
+
 let heightMap;
 let heightMapVisible = false;
 
@@ -153,12 +155,19 @@ function interpolateHeight (i) {
 
 		<g class="river" class:active={rivers.length > 0}>
 			{#each rivers as river}
-			{#if river.flux >= riverMin}
-				<path
-					d={svgRender(river.points)}
-					stroke-width={Math.log(river.flux + riverMin + 1) / 2}
-				/>
-			{/if}
+				<g>
+					{#each Array(river.length - 1).fill() as _, i}
+						{#if river[i][1] >= riverMin}
+							<line
+								x1={1e3 * circumcenters[river[i][0] * 2]}
+								y1={1e3 * circumcenters[river[i][0] * 2 + 1]}
+								x2={1e3 * circumcenters[river[i + 1][0] * 2]}
+								y2={1e3 * circumcenters[river[i + 1][0] * 2 + 1]}
+								stroke-width={Math.log(river[i+1][1] + riverMin + 1) / 2}
+							/>
+						{/if}
+					{/each}
+				</g>
 			{/each}
 		</g>
 
@@ -269,9 +278,10 @@ canvas.visible {
 	stroke-linejoin: round;
 }
 
-.river path {
+.river path,
+.river line {
 	stroke: rgb(13, 133, 193);
-	// stroke-width: 2;
+// 	// stroke-width: 2;
 }
 
 .coast path {

@@ -23,17 +23,19 @@ pub struct World {
     heights: Vec<f64>,
     #[serde(rename="cellHeights")]
     cell_heights: Vec<f64>,
+    rivers: Vec<Vec<(usize, f64)>>,
+
 }
 
-// #[wasm_bindgen]
+#[wasm_bindgen]
 pub struct TerrainGenerator {
-    // #[wasm_bindgen(skip)]
+    #[wasm_bindgen(skip)]
     pub noise: Noise
 }
 
-// #[wasm_bindgen]
+#[wasm_bindgen]
 impl TerrainGenerator {
-    // #[wasm_bindgen(constructor)]
+    #[wasm_bindgen(constructor)]
     pub fn new (seed: Option<u32>) -> TerrainGenerator {
         utils::set_panic_hook();
 
@@ -49,7 +51,7 @@ impl TerrainGenerator {
         (self.noise.fractal_noise(x, y) + 1.) / 2.
     }
 
-    // #[wasm_bindgen(js_name="heightmap")]
+    #[wasm_bindgen(js_name="heightmap")]
     pub fn heightmap_js (&self, points: Vec<f64>, heights: Option<Vec<f64>>) -> Vec<f64> {
         let heights = self.noise_array(&points, heights);
         TerrainGenerator::plateau(&points, heights)
@@ -218,16 +220,32 @@ impl TerrainGenerator {
         sea_level: f64,
         voronoi_cells: &Vec<Vec<usize>>,
         cell_heights: &Vec<f64>,
-        visited: &mut HashSet<usize>,
+        mut visited: &mut HashSet<usize>,
         i: usize,
         height: f64,
-        river: Vec<(usize, f64)>
+        mut river: Vec<(usize, f64)>
     ) -> (Vec<(usize, f64)>, Vec<Vec<(usize, f64)>>)
     {
-        visited.insert(i);                 // Whatever happens next, mark this node as visited
-        if heights[i] < sea_level { return (river, Vec::new()); } // If we're undersea, continue.
+        visited.insert(i); // Whatever happens next, mark this node as visited
 
-        river.push((i, flux[i]));          // Include this node to the main river
+
+        if height < sea_level {
+             // If we're undersea, check if at least two adjacent cells are land
+            let cells = &voronoi_cells[i];
+            let adjacent = cells
+                .into_iter()
+                .map(|cell| cell_heights[*cell])
+                .filter(|height| *height > sea_level)
+                .collect::<Vec<f64>>()
+                .len();
+
+            // If not, return empty
+            if adjacent < 2 {
+                return (river, Vec::new());
+            }
+        }
+
+        river.push((i, flux[i])); // Include this node to the main river
         let mut tributaries: Vec<Vec<(usize, f64)>> = Vec::new();  // Find rivers that run into this one.
         let mut main_branch_found = false;
 
@@ -236,21 +254,35 @@ impl TerrainGenerator {
         neighbors.sort_unstable_by(|&a, &b| flux[a].partial_cmp(&flux[b]).unwrap());
         for &neighbor in neighbors.iter().rev() {
             if visited.contains(&neighbor) { continue }
-            if heights[i] > adjacent[neighbor].iter().map(|&a| heights[a]).fold(f64::INFINITY, |a, b| a.min(b)) {
+            if height > adjacent[neighbor].iter().map(|&a| heights[a]).fold(f64::INFINITY, |a, b| a.min(b)) {
                 continue // if there exists a lower neighbor for this neighbor, skip
             }
 
             // Otherwise, continue recursion for either main branch or tributaries
             if !main_branch_found {
                 main_branch_found = true;
-                let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], river);
+                let mut tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], river);
+                // tuple is (
+                //   river: Vec<(index: usize, flux: f64)>,
+                //   tributaries: Vec<Vec<(index: usize, flux: f64)>>
+                // )
                 river = tuple.0;
-                tributaries.extend(&mut tuple.1.iter());
+                tributaries.append(&mut tuple.1);
 
             } else {
-                let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], Vec::new());
+                let mut tuple = TerrainGenerator::get_river(
+                    &heights,
+                    &adjacent,
+                    &flux,
+                    sea_level,
+                    &voronoi_cells,
+                    &cell_heights,
+                    &mut visited,
+                    neighbor,
+                    heights[neighbor],
+                    vec![(i, flux[i])]);
                 tributaries.push(tuple.0);
-                tributaries.extend(&mut tuple.1.iter());
+                tributaries.append(&mut tuple.1);
 
             }
         }
@@ -272,12 +304,24 @@ impl TerrainGenerator {
 
         for &(i, height) in sorted.iter() {
             if visited.contains(&i) { continue }
-            let tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, i, height, Vec::new());
-            rivers.push(&tuple.0);
-            rivers.extend(&tuple.1.iter());
+            // Might want to continue here if height < sea_level.
+            let mut tuple = TerrainGenerator::get_river(
+                &heights,
+                &adjacent,
+                &flux,
+                sea_level,
+                &voronoi_cells,
+                &cell_heights,
+                &mut visited,
+                i,
+                height,
+                Vec::new()
+            );
+            rivers.push(tuple.0);
+            rivers.append(&mut tuple.1);
         }
 
-        rivers
+        rivers.into_iter().filter(|r| r.len() > 1).collect::<Vec<Vec<(usize, f64)>>>()
     }
 
     pub fn world (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> JsValue {
@@ -302,7 +346,7 @@ impl TerrainGenerator {
 
         let rivers = TerrainGenerator::get_rivers(&heights, &voronoi.adjacent, sea_level, &voronoi.voronoi_cells, &cell_heights);
 
-        let world = World { voronoi, heights, cell_heights };
+        let world = World { voronoi, heights, cell_heights, rivers };
         JsValue::from_serde(&world).unwrap()
     }
 }

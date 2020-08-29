@@ -12,4 +12,4 @@ mod utils;
 mod poisson;
 mod noise;
 pub mod terrain_generator;
-pub mod voronoi;
+mod voronoi;

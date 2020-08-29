@@ -1,205 +1,9 @@
 import wasm from './terrain_generator/Cargo.toml';
-
 // import { makeRandomLanguage, makeName } from './language.js';
 import { min, max, mean, maxIndex, minIndex } from 'd3-array';
 
 function getPointFrom (points) {
   return i => [points[2 * i], points[2 * i + 1]];
-}
-
-function fillBasins (heights, adjacent, seaLevel) {
-  // Find all the bodies of water
-  let start = 0;
-  let frontier = [ start ];
-  let queued = [ true ]
-  let visited = [];
-  let lakes = [];
-
-
-  while (frontier.length > 0) {
-    let i = frontier[0];
-    frontier.splice(0, 1);
-    if (visited[i]) continue;
-
-    if (heights[i] < seaLevel) {
-      let lake = [ i ];
-      let lakeFrontier = adjacent[i];
-
-      while (lakeFrontier.length > 0) {
-        let i = lakeFrontier[0];
-        lakeFrontier.splice(0, 1);
-        if (visited[i]) continue;
-
-        let sea = heights[i] < seaLevel;
-        if (sea) {
-          lake.push(i);
-        }
-
-        let selectedFrontier = sea ? lakeFrontier : frontier;
-        for (let neighbor of adjacent[i]) {
-          if (!visited[neighbor] && !queued[neighbor]) {
-            selectedFrontier.push(neighbor);
-            queued[neighbor] = true;
-          }
-        }
-        visited[i] = true;
-      }
-      lakes.push(lake);
-    }
-
-    for (let neighbor of adjacent[i]) {
-      if (!visited[neighbor] && !queued[neighbor]) {
-        frontier.push(neighbor);
-        queued[neighbor] = true;
-      }
-    }
-    visited[i] = true;
-  }
-
-  // Select the largest body of water
-  let l = maxIndex(lakes, lake => lake.length);
-
-  lakes.splice(l, 1);
-  for (let lake of lakes) {
-    for (let i of lake) {
-      heights[i] = seaLevel;
-    }
-  }
-
-  // check if main water body touches edges
-  // find all other bodies of water
-  // fill to seaLevel if they or the main body doesn't touch the edge of the map
-
-  // TODO: find COAST PATHS
-  // Depth-first search for nodes which didn't come from activenode index
-  // If no node left, we found edge. reverse current array, go back to start and look the other way.
-  //
-  return heights;
-}
-
-
-function plateau (circumcenters, heights) {
-  const plateauStart = 0.45 // mean(heights);
-  const plateauCap = (1 - plateauStart) / 4; // REVIEW: 4 is magic here.
-
-  const peakIndex = maxIndex(heights);
-  const peakX = circumcenters[peakIndex * 2 + 0];
-  const peakY = circumcenters[peakIndex * 2 + 1];
-
-  function interpolate (i) {
-    return plateauStart + (1 - (1 - (i - plateauStart) / (1 - plateauStart))**2) * plateauCap;
-  }
-
-  heights = heights.slice();
-  for (var i = 0; i < heights.length; i++) {
-    let height = heights[i];
-    if (height < plateauStart) continue;
-
-    let x = circumcenters[i * 2 + 0];
-    let y = circumcenters[i * 2 + 1];
-
-    // 1.5 is slighty more than sqrt(2), which – because maths – means we're
-    // capping the distance at a bit more than half the size of the map
-    // Then we're dividing by 1.5 to get [0, 1] range
-    let distanceToPeak = Math.min(0.5, Math.sqrt((x - peakX)**2 + (y - peakY)**2)) / 0.5;
-    distanceToPeak = distanceToPeak ** 2; // SmoothStart
-
-    // Height is the sum of identity and interpolation, weighted by distance
-    heights[i] = (1 - distanceToPeak) * height + (distanceToPeak) * interpolate(height);
-  }
-
-  return heights;
-}
-
-
-function erode (oldHeights, adjacent, seaLevel) {
-  let heights = fillSinks(oldHeights, adjacent, seaLevel);
-
-  let flux = getFlux(heights, adjacent);
-  let n = heights.length;
-
-  let erosionRate = 0.0125;
-  // let fluxExponent = 1100 + 0.048 * n;
-  let fluxExponent = 1e3;
-
-  heights = heights.map((height, i) => {
-    let underwaterDiscount = height < seaLevel ? 1e4 ** (height - seaLevel) : 1;
-    let pointFlux = 1 - (1 - flux[i] / flux.length) ** fluxExponent;
-    let newHeight = height - pointFlux * erosionRate * pointFlux * underwaterDiscount;
-    return newHeight;
-  });
-
-  return heights;
-}
-
-
-function getFlux (heights, adjacent) {
-  let flux = new Uint8ClampedArray(heights.length);
-  let sorted = heights
-    .map((height, i) => ({ height, i }))
-    .sort((a, b) => Math.sign(b.height - a.height));
-
-  // find downhill for each point.
-  for (let k = 0; k < sorted.length; k++) {
-    const { height, i } = sorted[k];
-    let neighbors = adjacent[i];
-    let low = minIndex(neighbors, n => heights[n]);
-    if (heights[neighbors[low]] > height) continue;
-    flux[neighbors[low]] += 1 + flux[i];
-  }
-
-  return flux;
-}
-
-
-function fillSinks (heights, adjacent, seaLevel, epsilon=1e-5) {
-  // Mewo implementation details: https://mewo2.com/notes/terrain/
-  // Original paper: https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/sous_copyright/010031925.pdf
-
-  // All non-water tiles start with infinite heights.
-  let newHeights = heights.map(height => height > seaLevel ? Infinity : height);
-
-  // ascending
-  let sorted = heights
-    .map((height, i) => ({ height, i }))
-    .sort((a, b) => Math.sign(a.height - b.height));
-
-  let changed = true;
-  while (changed) {
-    console.log("sinkfill");
-    changed = false;
-
-    for (let k = 0; k < sorted.length; k++) {
-      const { height, i } = sorted[k];
-      if (newHeights[i] === height) continue;
-
-      let neighbors = adjacent[i];
-      for (let n = 0; n < neighbors.length; n++) {
-        let otherHeight = newHeights[neighbors[n]] + epsilon;
-
-        if (height >= otherHeight) {
-          newHeights[i] = height;
-          changed = true;
-          break;
-        }
-
-        if (newHeights[i] > otherHeight && otherHeight > height) {
-          newHeights[i] = otherHeight;
-          changed = true;
-        }
-      }
-    }
-  }
-
-  return newHeights;
-}
-
-
-function getCellHeight (heights, voronoiPoints) {
-  return (_, i) => {
-    const points = voronoiPoints[i];
-    return points.reduce((a, b) => a + heights[b], 0) / points.length
-  }
 }
 
 
@@ -263,33 +67,6 @@ function getCoastLines (coastCells, seaLevel, voronoiPoints, cellLookup, cellHei
 }
 
 
-function getRivers (heights, adjacent, seaLevel, voronoiCells, cellHeights) {
-  // IDEA: Use depth-first search instead. Start from sea and climb with flux
-  // Create instances of `River`: "Notable" rivers that might have their own name.
-  // While climbing, choose the one with highest flux such that rivers are only ever a single line
-
-  let rivers = new Array(heights.length).fill();
-
-  let flux = getFlux(heights, adjacent);
-  function findSlope ({ i, flux })  {
-    let low = minIndex(adjacent[i], n => heights[n]);
-
-    if (heights[adjacent[i][low]] > heights[i]) {
-      return { points: [i, i], flux, bad: true };
-    }
-    return { points: [i, adjacent[i][low]], flux };
-  }
-
-  rivers = rivers
-    .map((_, i) => ({ flux: flux[i], i }))
-    .filter((_, i) => voronoiCells[i].filter(c => cellHeights[c] >= seaLevel).length > 1)
-    .map(findSlope)
-    .filter(o => !o.bad);
-
-  return rivers;
-}
-
-
 function svgRender (d) {
 	return 'M' + d.map(d => 1000 * d[0] + ',' + 1000 * d[1]).join('L') + 'Z';
 }
@@ -316,22 +93,12 @@ class TerrainGenerator {
     this.yieldHeights = yieldHeights;
     this.wasm = new Promise((resolve, reject) => wasm()
       .then(result => {
+        console.log(result);
         this.terrainGen = new result.TerrainGenerator(seed);
-        this.voronoiGen = result.get_voronoi;
         resolve(true);
       }).catch(reject)
     );
   }
-
-  // async fractalNoise (x, y) {
-  //   await this.wasm;
-  //   return this.terrainGen.fractal_noise(x, y);
-  // }
-
-  // async noiseHeight (x, y, { min=-1, max=1 }={}) {
-  //   await this.wasm;
-  //   return this.terrainGen.noise_single(x, y);
-  // }
 
   async noisyHeights (points, heights) {
     await this.wasm;
@@ -358,7 +125,6 @@ class TerrainGenerator {
     return pixels;
   }
 
-
   async generate () {
     let points = this.points;
     let extent = this.extent;
@@ -371,14 +137,13 @@ class TerrainGenerator {
     await this.wasm;
 
     let terrainGen = this.terrainGen;
-    let voronoiGen = this.voronoiGen;
 
     let world = {};
     world.heightMap = this.generateHeightmap
 
     let radius = Math.pow(500 / points, 0.5) / 10;
 
-    let { voronoi: rustVoronoi, heights, cellHeights } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
+    let { voronoi: rustVoronoi, heights, cellHeights, rivers } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
 
     world.heights = heights;
     world.cellHeights = cellHeights;
@@ -401,13 +166,14 @@ class TerrainGenerator {
     world.coastLines = getCoastLines(world.coastCells, seaLevel, voronoiPoints, voronoiCellsLookup, world.cellHeights)
       .map(d => d.map(getEdgeCoordinates))
 
-    world.rivers = getRivers(world.heights, voronoiAdjacency, seaLevel, voronoiCellsLookup, world.cellHeights)
-      .map(river => {
-        let [a, b] = river.points;
-        river.points[0] = getEdgeCoordinates(a);
-        river.points[1] = getEdgeCoordinates(b);
-        return river;
-      });
+    world.rivers = rivers;
+    // world.rivers = getRivers(world.heights, voronoiAdjacency, seaLevel, voronoiCellsLookup, world.cellHeights)
+    //   .map(river => {
+    //     let [a, b] = river.points;
+    //     river.points[0] = getEdgeCoordinates(a);
+    //     river.points[1] = getEdgeCoordinates(b);
+    //     return river;
+    //   });
 
     // TODO: find which edge is facing water and record those points?
     // IDEA: Talk along the edge of one coast cell, removing indices as they're visited
