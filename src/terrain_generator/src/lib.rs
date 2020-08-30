@@ -13,4 +13,6 @@ mod poisson;
 mod noise;
 mod erosion;
 mod voronoi;
+mod rivers;
+mod coasts;
 pub mod terrain_generator;

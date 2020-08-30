@@ -1,12 +1,12 @@
 use wasm_bindgen::prelude::*;
 
-use std::collections::HashSet;
-
 use super::utils;
 use super::poisson;
 use super::noise::Noise;
 use super::voronoi::Voronoi;
 use super::erosion::*;
+use super::rivers::*;
+use super::coasts::*;
 
 extern crate web_sys;
 
@@ -18,18 +18,21 @@ macro_rules! log {
 }
 
 
+#[wasm_bindgen(readonly)]
 #[derive(Serialize)]
 pub struct World {
-    // #[wasm_bindgen(readonly)]
     voronoi: Voronoi,
-    // #[wasm_bindgen(readonly)]
     heights: Vec<f64>,
-    // #[wasm_bindgen(readonly)]
+
     #[serde(rename="cellHeights")]
     cell_heights: Vec<f64>,
-    // #[wasm_bindgen(readonly)]
     rivers: Vec<Vec<(usize, f64)>>,
 
+    #[serde(rename="triangleHeights")]
+    triangle_heights: Vec<f64>,
+
+    #[serde(rename="coastLines")]
+    coast_lines: Vec<(usize, usize)>,
 }
 
 #[wasm_bindgen]
@@ -90,116 +93,34 @@ impl TerrainGenerator {
         cell_heights
     }
 
+    fn get_triangle_heights (cell_heights: &Vec<f64>, heights: &Vec<f64>, voronoi_triangles: &Vec<usize>, sea_level: f64) -> Vec<f64> {
+        let mut triangle_heights = vec![0.; voronoi_triangles.len() / 3];
+        for i in 0..triangle_heights.len() {
+            let j = i * 3;
+            let center_height = cell_heights[voronoi_triangles[j + 0]%cell_heights.len()];
+            let height1       =      heights[voronoi_triangles[j + 1]%heights.len()];
+            let height2       =      heights[voronoi_triangles[j + 2]%heights.len()];
 
-    fn get_river (
-        heights: &Vec<f64>,
-        adjacent: &Vec<Vec<usize>>,
-        flux: &Vec<f64>,
-        sea_level: f64,
-        voronoi_cells: &Vec<Vec<usize>>,
-        cell_heights: &Vec<f64>,
-        mut visited: &mut HashSet<usize>,
-        i: usize,
-        height: f64,
-        mut river: Vec<(usize, f64)>
-    ) -> (Vec<(usize, f64)>, Vec<Vec<(usize, f64)>>)
-    {
-        visited.insert(i); // Whatever happens next, mark this node as visited
+            let mut mean = (center_height + height1 + height2) / 3.;
 
-
-        if height < sea_level {
-             // If we're undersea, check if at least two adjacent cells are land
-            let cells = &voronoi_cells[i];
-            let adjacent = cells
+            let subsea = vec![center_height, height1, height2]
                 .into_iter()
-                .map(|cell| cell_heights[*cell])
-                .filter(|height| *height > sea_level)
-                .collect::<Vec<f64>>()
-                .len();
+                .filter(|x| *x > sea_level)
+                .count();
 
-            // If not, return empty
-            if adjacent < 2 {
-                return (river, Vec::new());
+            // If the triangle is bordering sea we choose to set the value to be what the voronoi
+            // height is so land/sea borders are always around the circumference of the voronoi cells.
+            if (subsea != 3) & (subsea != 0) {
+                if center_height >= sea_level {
+                    mean = mean.max(sea_level + 1e-3);
+                } else {
+                    mean = mean.min(sea_level - 1e-3);
+                }
             }
+            triangle_heights[i] = mean;
         }
 
-        river.push((i, flux[i])); // Include this node to the main river
-        let mut tributaries: Vec<Vec<(usize, f64)>> = Vec::new();  // Find rivers that run into this one.
-        let mut main_branch_found = false;
-
-        // Check all neighbors by flux order
-        let mut neighbors = adjacent[i].clone();
-        neighbors.sort_unstable_by(|&a, &b| flux[a].partial_cmp(&flux[b]).unwrap());
-        for &neighbor in neighbors.iter().rev() {
-            if visited.contains(&neighbor) { continue }
-            if height > adjacent[neighbor].iter().map(|&a| heights[a]).fold(f64::INFINITY, |a, b| a.min(b)) {
-                continue // if there exists a lower neighbor for this neighbor, skip
-            }
-
-            // Otherwise, continue recursion for either main branch or tributaries
-            if !main_branch_found {
-                main_branch_found = true;
-                let mut tuple = TerrainGenerator::get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], river);
-                // tuple is (
-                //   river: Vec<(index: usize, flux: f64)>,
-                //   tributaries: Vec<Vec<(index: usize, flux: f64)>>
-                // )
-                river = tuple.0;
-                tributaries.append(&mut tuple.1);
-
-            } else {
-                let mut tuple = TerrainGenerator::get_river(
-                    &heights,
-                    &adjacent,
-                    &flux,
-                    sea_level,
-                    &voronoi_cells,
-                    &cell_heights,
-                    &mut visited,
-                    neighbor,
-                    heights[neighbor],
-                    vec![(i, flux[i])]);
-                tributaries.push(tuple.0);
-                tributaries.append(&mut tuple.1);
-
-            }
-        }
-
-        (river, tributaries)
-    }
-
-    fn get_rivers (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64, voronoi_cells: &Vec<Vec<usize>>, cell_heights: &Vec<f64>) -> Vec<Vec<(usize, f64)>> {
-        let flux = get_flux(heights, adjacent);
-        let mut sorted = heights
-            .clone()
-            .into_iter()
-            .enumerate()
-            .collect::<Vec<(usize, f64)>>();
-        sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
-
-        let mut visited = HashSet::new();
-        let mut rivers: Vec<Vec<(usize, f64)>> = Vec::new();
-
-        for &(i, height) in sorted.iter() {
-            if visited.contains(&i) { continue }
-            // Might want to continue here if height < sea_level.
-            let mut tuple = TerrainGenerator::get_river(
-                &heights,
-                &adjacent,
-                &flux,
-                sea_level,
-                &voronoi_cells,
-                &cell_heights,
-                &mut visited,
-                i,
-                height,
-                Vec::new()
-            );
-            rivers.push(tuple.0);
-            rivers.append(&mut tuple.1);
-        }
-
-        rivers.into_iter().filter(|r| r.len() > 1).collect::<Vec<Vec<(usize, f64)>>>()
+        triangle_heights
     }
 
     pub fn world (&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> JsValue {
@@ -222,9 +143,16 @@ impl TerrainGenerator {
         let cell_heights = TerrainGenerator::get_cell_heights(voronoi.delaunay.points.len() / 2, &heights, &voronoi.voronoi_points);
         log!(" ✓ cell heights calculated");
 
-        let rivers = TerrainGenerator::get_rivers(&heights, &voronoi.adjacent, sea_level, &voronoi.voronoi_cells, &cell_heights);
+        let triangle_heights = TerrainGenerator::get_triangle_heights(&cell_heights, &heights, &voronoi.voronoi_triangles, sea_level);
+        log!(" ✓ triangle heights calculated");
 
-        let world = World { voronoi, heights, cell_heights, rivers };
+        let rivers = get_rivers(&heights, &voronoi.adjacent, sea_level, &voronoi.voronoi_cells, &cell_heights);
+        log!(" ✓ rivers flowed");
+
+        let coast_lines = get_coast_lines(&cell_heights, &voronoi.delaunay.neighbors, &voronoi.voronoi_points, &voronoi.voronoi_cells, sea_level);
+        log!(" ✓ coasts lines carved");
+
+        let world = World { voronoi, heights, cell_heights, rivers, triangle_heights, coast_lines };
         JsValue::from_serde(&world).unwrap()
     }
 }

@@ -22,8 +22,6 @@ let coastLines = [];
 let rivers = [];
 let riverMin = 0;
 
-$: console.log(rivers)
-
 let heightMap;
 let heightMapVisible = false;
 
@@ -43,7 +41,7 @@ onMount(() => {
 	console.log('seed:', seed);
 	generator = new TerrainGenerator({
 		// yieldPoints: true,
-		points: 2**10,
+		points: 2**12,
 		seaLevel,
 		seed
 		// seed: 82013022
@@ -163,7 +161,7 @@ function interpolateHeight (i) {
 								y1={1e3 * circumcenters[river[i][0] * 2 + 1]}
 								x2={1e3 * circumcenters[river[i + 1][0] * 2]}
 								y2={1e3 * circumcenters[river[i + 1][0] * 2 + 1]}
-								stroke-width={Math.log(river[i+1][1] + riverMin + 1) / 2}
+								stroke-width={Math.log(river[i+1][1] - riverMin + 1) / 2}
 							/>
 						{/if}
 					{/each}
