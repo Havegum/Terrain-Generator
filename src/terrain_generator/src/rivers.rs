@@ -17,7 +17,6 @@ pub fn get_river (
 {
     visited.insert(i); // Whatever happens next, mark this node as visited
 
-
     if height < sea_level {
          // If we're undersea, check if at least two adjacent cells are land
         let cells = &voronoi_cells[i];
@@ -50,7 +49,17 @@ pub fn get_river (
         // Otherwise, continue recursion for either main branch or tributaries
         if !main_branch_found {
             main_branch_found = true;
-            let mut tuple = get_river(&heights, &adjacent, &flux, sea_level, &voronoi_cells, &cell_heights, &mut visited, neighbor, heights[neighbor], river);
+            let mut tuple = get_river(
+                &heights,
+                &adjacent,
+                &flux,
+                sea_level,
+                &voronoi_cells,
+                &cell_heights,
+                &mut visited,
+                neighbor,
+                heights[neighbor],
+                river);
             // tuple is (
             //   river: Vec<(index: usize, flux: f64)>,
             //   tributaries: Vec<Vec<(index: usize, flux: f64)>>

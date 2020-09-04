@@ -2,7 +2,6 @@
 import { onMount } from 'svelte';
 import { svgRender, TerrainGenerator } from './terrain.js';
 import { interpolateYlGn as interpolateLand, interpolatePuBu as interpolateSea } from 'd3-scale-chromatic';
-import { max, min } from 'd3-array';
 
 let svg, width, height;
 let canvas;
@@ -155,14 +154,15 @@ function interpolateHeight (i) {
 			{#each rivers as river}
 				<g>
 					{#each Array(river.length - 1).fill() as _, i}
-						{#if river[i][1] >= riverMin}
+						{#if river[i+1][1] > riverMin}
 							<line
 								x1={1e3 * circumcenters[river[i][0] * 2]}
 								y1={1e3 * circumcenters[river[i][0] * 2 + 1]}
 								x2={1e3 * circumcenters[river[i + 1][0] * 2]}
 								y2={1e3 * circumcenters[river[i + 1][0] * 2 + 1]}
-								stroke-width={Math.log(river[i+1][1] - riverMin + 1) / 2}
+								stroke-width={Math.log(river[i+1][1] - riverMin) / 2}
 							/>
+							<!-- stroke-width={Math.log(river[i+1][1] - riverMin + 1) / 2} -->
 						{/if}
 					{/each}
 				</g>
