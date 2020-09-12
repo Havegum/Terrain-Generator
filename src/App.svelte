@@ -100,11 +100,14 @@ async function generate () {
 
 	const setHeightmap = async () => heightMap = new ImageData(await generator.generateHeightmap(100), 100, 100);
 
+	let now = Date.now();
 	frame(setTerrain)
 		.then(() => frame(setCoasts))
 		.then(() => frame(setRivers))
 		.then(() => frame(setHeightmap))
-		.then(() => frame(setPoints));
+		.then(() => frame(setPoints))
+		.then(() => console.log('ms:', Date.now() - now));
+
 }
 
 function interpolateHeight (i) {

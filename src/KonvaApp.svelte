@@ -4,32 +4,33 @@ import { scaleLinear } from 'd3-scale';
 
 // Konva & Svelte tutorial here:
 // https://geoexamples.com/svelte/2020/08/05/svelte-konva-mapping.html
-import Konva from './draw-components/Konva.svelte';
-import Layer from './draw-components/Layer.svelte';
-import Group from './draw-components/Group.svelte';
-import Circle from './draw-components/Circle.svelte';
-import Polygon from './draw-components/Polygon.svelte';
+import Konva from './draw-components-konva/Konva.svelte';
+import Layer from './draw-components-konva/Layer.svelte';
+import Group from './draw-components-konva/Group.svelte';
+import Circle from './draw-components-konva/Circle.svelte';
+import Polygon from './draw-components-konva/Polygon.svelte';
+import Path from './draw-components-konva/Path.svelte';
 
 import { svgRender, TerrainGenerator } from './terrain.js';
 import { interpolateYlGn as interpolateLand, interpolatePuBu as interpolateSea } from 'd3-scale-chromatic';
 
-let canvas, width, height, generator;
+let generator;
 let seaLevel = 0.39;
 let extent = { width: 1, height: 1 };
+let riverMin = 0;
 
 const scaleSingle = scaleLinear()
   .domain([0, 1])
   .range([0, 500]);
 
 const scalePair = pair => pair.map(scaleSingle);
-const scaleCoords = coords => coords.map(scalePair);
+const scale = coords => coords.map(scalePair);
 
 onMount(() => {
-  console.log('hey');
   let seed = Math.floor(Math.random() * 1e8);
-
+  console.log('seed:', seed);
   generator = new TerrainGenerator({
-		points: 2**10,
+		points: 2**12,
 		seaLevel,
 		seed
 	});
@@ -41,8 +42,8 @@ let isLand;
 let heights;
 let voronoiAdjacency;
 let circumcenters;
-let rivers;
-let coastLines;
+let rivers = [];
+let coasts = [];
 let points;
 let triangles = [];
 let heightMap;
@@ -74,7 +75,7 @@ async function generate () {
 	circumcenters = world.circumcenters;
 
 	const setRivers = () => rivers = world.rivers;
-	const setCoasts = () => coastLines = world.coastLines;
+	const setCoasts = () => coasts = world.coastLines;
 	const setPoints = () => points = world.points;
 	const setTerrain = () => triangles = Array(world.voronoiTriangles.length / 3)
 			.fill()
@@ -94,26 +95,60 @@ async function generate () {
 
 	const setHeightmap = async () => heightMap = new ImageData(await generator.generateHeightmap(100), 100, 100);
 
+  let now = Date.now();
 	frame(setTerrain)
 		.then(() => frame(setCoasts))
 		.then(() => frame(setRivers))
 		.then(() => frame(setHeightmap))
-		.then(() => frame(setPoints));
+		.then(() => frame(setPoints))
+    .then(() => console.log('ms:', Date.now() - now));
 }
 
-$: if (triangles[0]) console.log(triangles[0], scaleCoords(triangles[0]));
+function getRiverCoords (river, i) {
+  // let line =
+  return [
+    [circumcenters[river[i + 0][0] * 2], circumcenters[river[i + 0][0] * 2 + 1]],
+    [circumcenters[river[i + 1][0] * 2], circumcenters[river[i + 1][0] * 2 + 1]]
+  ];
+}
 </script>
+
 
 <Konva>
   <Layer name="geography">
-    <Group name="triangles">
+    <Group zIndex={0} name="triangles">
       {#each triangles as coords, i}
         <Polygon
-          coordinates={scaleCoords(coords)}
+          coordinates={scale(coords)}
           fill={interpolateHeight(i)}
           stroke={interpolateHeight(i)}
           strokeWidth={1}
         />
+      {/each}
+    </Group>
+
+    <Group zIndex={2} name="coast">
+      {#each coasts as coast}
+        <Path
+          coordinates={scale(coast)}
+          stroke="#133b66"
+        />
+      {/each}
+    </Group>
+
+    <Group zIndex={1}>
+      {#each rivers as river}
+        <Group>
+          {#each Array(river.length - 1).fill() as _, i}
+            {#if river[i+1][1] > riverMin}
+              <Path
+                coordinates={scale(getRiverCoords(river, i))}
+                strokeWidth={Math.log(river[i+1][1] - riverMin + 1) / 2}
+                stroke="#0d85c1"
+              />
+            {/if}
+          {/each}
+        </Group>
       {/each}
     </Group>
   </Layer>
