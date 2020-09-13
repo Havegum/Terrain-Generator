@@ -32,7 +32,6 @@ class TerrainGenerator {
     this.yieldHeights = yieldHeights;
     this.wasm = new Promise((resolve, reject) => wasm()
       .then(result => {
-        console.log(result);
         this.terrainGen = new result.TerrainGenerator(seed);
         resolve(true);
       }).catch(reject)
