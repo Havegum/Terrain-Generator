@@ -8,7 +8,7 @@ function initScene (gl) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // Clear the canvas before we start drawing on it.
 
   // Setup "camera"
-  const fieldOfView = 45 * Math.PI / 180;   // in radians
+  const fieldOfView = 20 * Math.PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;

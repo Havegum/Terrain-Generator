@@ -27,7 +27,7 @@ onMount(async () => {
 
   await generate();
 
-  draw(canvas, triangles, points, circumcenters, heights);
+  draw(canvas, triangles, points, circumcenters, heights, seaLevel);
 });
 
 async function generate () {
