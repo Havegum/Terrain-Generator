@@ -3,7 +3,9 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
+import { string } from 'rollup-plugin-string';
 import rust from '@wasm-tool/rollup-plugin-rust';
+import json from '@rollup/plugin-json';
 
 import autoPreprocess from 'svelte-preprocess';
 
@@ -30,7 +32,7 @@ export default {
 
 		resolve({
 			browser: true,
-			dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/')
+			dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/'),
 		}),
 
 		commonjs(),
@@ -40,6 +42,8 @@ export default {
 			verbose: !production
 		}),
 
+		string({ include: ['**/*.glsl', '**/*.vert', '**/*.frag'] }),
+		json(),
 		!production && livereload('public'), // Watch and autoreload if in dev
 		production && terser() 							 // Minify if in production
 	],

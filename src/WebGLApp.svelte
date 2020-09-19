@@ -18,16 +18,17 @@ let heightMap = [];
 
 onMount(async () => {
   let seed = Math.floor(Math.random() * 1e8);
+  // seed = 30544282;
   console.log('seed:', seed);
   generator = new TerrainGenerator({
-    points: 2**12,
+    points: 2**13,
     seaLevel,
     seed
   });
 
   await generate();
 
-  draw(canvas, triangles, points, circumcenters, heights, seaLevel);
+  draw(canvas, triangles, points, circumcenters, heights, seaLevel, coasts, rivers);
 });
 
 async function generate () {

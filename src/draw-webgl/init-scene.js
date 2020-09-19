@@ -19,7 +19,7 @@ function initScene (gl) {
   // Now move the drawing position a bit to where we want to start drawing the square.
   mat4.translate(modelViewMatrix,     // destination matrix
                  modelViewMatrix,     // matrix to translate
-                 [-0.0, 0.0, -6.0]);  // amount to translate
+                 [-0.5, -0.5, -2.85]);  // amount to translate
 
   return { projectionMatrix, modelViewMatrix };
 }

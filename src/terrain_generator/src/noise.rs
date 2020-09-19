@@ -15,9 +15,9 @@ impl Noise {
         height.set_noise_type(NoiseType::SimplexFractal);
         height.set_fractal_type(FractalType::FBM);
         height.set_fractal_octaves(5);
-        height.set_fractal_gain(0.6);
+        height.set_fractal_gain(0.5);
         height.set_fractal_lacunarity(3.0);
-        height.set_frequency(0.85);
+        height.set_frequency(0.8);
 
         let mut theta = FastNoise::seeded(seed + 1);
         theta.set_noise_type(NoiseType::Simplex);
