@@ -4,24 +4,17 @@ import { TerrainGenerator } from './terrain.js';
 import draw from './draw-webgl/draw.js';
 
 let canvas;
-let generator;
+let canvas2d;
 let seaLevel = 0.39;
-let isLand = [];
-let heights = [];
-let voronoiAdjacency = [];
-let circumcenters = [];
-let rivers = [];
-let coasts = [];
-let points = [];
-let triangles = [];
-let heightMap = [];
+let generator;
+let done = false;
 
 onMount(async () => {
   let seed = Math.floor(Math.random() * 1e8);
   // seed = 30544282;
   console.log('seed:', seed);
   generator = new TerrainGenerator({
-    points: 2**12,
+    points: 2**13,
     seaLevel,
     seed
   });
@@ -32,13 +25,16 @@ onMount(async () => {
 
   let now = Date.now();
   draw(canvas, triangles, points, circumcenters, heights, seaLevel, coasts, rivers);
-  console.log(`✓ rendered in ${Date.now() - now}ms`)
+
+  canvas2d.getContext('2d').drawImage(canvas, 0, 0);
+  console.log(`✓ rendered in ${Date.now() - now}ms`);
+  done = true;
 });
 
 async function generate () {
   let world = await generator.generate();
 
-	triangles = Array(world.voronoiTriangles.length / 3)
+	let triangles = Array(world.voronoiTriangles.length / 3)
 			.fill()
 			.map((_, i) => {
 				const j = i * 3;
@@ -68,4 +64,14 @@ async function generate () {
 
 </script>
 
-<canvas bind:this={canvas} width="500" height="500" />
+<canvas bind:this={canvas}  class="webgl" class:done width="500" height="500" />
+<canvas bind:this={canvas2d} class="view" class:done width="500" height="500" />
+
+<style>
+.webgl.done {
+  display: none;
+}
+.view:not(.done) {
+  display: none;
+}
+</style>

@@ -110,7 +110,7 @@ pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> 
     let n = heights.len() as f64;
 
     let erosion_rate = 0.0125;
-    let flux_exponent = 1e3 as i32;
+    let flux_exponent = 2500 as i32;
 
     let erosion = |(i, height): (usize, f64)| {
         let underwater_discount = if height < sea_level
