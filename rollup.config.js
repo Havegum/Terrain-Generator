@@ -42,7 +42,7 @@ export default {
 			verbose: !production
 		}),
 
-		string({ include: ['**/*.glsl', '**/*.vert', '**/*.frag'] }),
+		string({ include: ['**/*.glsl'] }),
 		json(),
 		!production && livereload('public'), // Watch and autoreload if in dev
 		production && terser() 							 // Minify if in production

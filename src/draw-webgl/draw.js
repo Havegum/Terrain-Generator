@@ -1,9 +1,9 @@
-import terrainVertShader from './shaders/terrain.vert';
-import terrainFragShader from './shaders/terrain.frag';
+import terrainVertShader from './shaders/terrain.vert.glsl';
+import terrainFragShader from './shaders/terrain.frag.glsl';
 
-import lineVertShader from './shaders/line.vert';
-import lineFragShader from './shaders/line.frag';
-import varyingWidthLineVertShader from './shaders/varyingWidthLine.vert';
+import lineVertShader from './shaders/line.vert.glsl';
+import lineFragShader from './shaders/line.frag.glsl';
+import varyingWidthLineVertShader from './shaders/varyingWidthLine.vert.glsl';
 
 import { interpolateYlGn as interpolateLand, interpolatePuBu as interpolateSea } from 'd3-scale-chromatic';
 import { context } from 'gl-util';
@@ -153,7 +153,7 @@ export default function draw (canvas, triangles, points, circumcenters, heights,
     })
   );
 
-  const riverCap = 6;
+  const riverCap = 40;
 
   const riverWidths = rivers.flatMap(river =>
     river.flatMap((part, i, arr) => {

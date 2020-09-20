@@ -21,26 +21,23 @@ onMount(async () => {
   // seed = 30544282;
   console.log('seed:', seed);
   generator = new TerrainGenerator({
-    points: 2**13,
+    points: 2**12,
     seaLevel,
     seed
   });
 
-  await generate();
+  const {
+    triangles, points, circumcenters, heights, coasts, rivers
+  } = await generate();
 
+  let now = Date.now();
   draw(canvas, triangles, points, circumcenters, heights, seaLevel, coasts, rivers);
+  console.log(`✓ rendered in ${Date.now() - now}ms`)
 });
 
 async function generate () {
   let world = await generator.generate();
 
-	isLand = world.isLand;
-	heights = world.triangleHeights;
-	voronoiAdjacency = world.voronoiAdjacency;
-	circumcenters = world.circumcenters;
-	rivers = world.rivers;
-	coasts = world.coastLines;
-	points = world.points;
 	triangles = Array(world.voronoiTriangles.length / 3)
 			.fill()
 			.map((_, i) => {
@@ -56,9 +53,17 @@ async function generate () {
         ];
 			});
 
-	heightMap = new ImageData(await generator.generateHeightmap(100), 100, 100);
-
-  let now = Date.now();
+  return {
+    isLand: world.isLand,
+    heights: world.triangleHeights,
+    voronoiAdjacency: world.voronoiAdjacency,
+    circumcenters: world.circumcenters,
+    rivers: world.rivers,
+    coasts: world.coastLines,
+    points: world.points,
+    triangles,
+    heightMap: new ImageData(await generator.generateHeightmap(100), 100, 100),
+  };
 }
 
 </script>
