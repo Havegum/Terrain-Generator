@@ -12,6 +12,7 @@ let done = false;
 onMount(async () => {
   let seed = Math.floor(Math.random() * 1e8);
   // seed = 30544282;
+  // seed = 99951525;
   console.log('seed:', seed);
   generator = new TerrainGenerator({
     points: 2**13,

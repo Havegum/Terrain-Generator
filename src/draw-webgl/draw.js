@@ -153,7 +153,7 @@ export default function draw (canvas, triangles, points, circumcenters, heights,
     })
   );
 
-  const riverCap = 40;
+  const riverCap = 80;
   const riverWidths = rivers.flatMap(river =>
     river.flatMap((part, i, arr) => {
       if (i === arr.length - 1) return [];
