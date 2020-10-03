@@ -67,11 +67,7 @@ class TerrainGenerator {
     let points = this.points;
     let extent = this.extent;
     let seaLevel = this.seaLevel;
-    let relaxIterations = this.relaxIterations;
     let seed = this.seed;
-    let yieldPoints = this.yieldPoints;
-    let yieldRelax = this.yieldRelax;
-    let yieldHeights = this.yieldHeights;
     await this.wasm;
 
     let terrainGen = this.terrainGen;
@@ -81,27 +77,22 @@ class TerrainGenerator {
 
     let radius = Math.pow(500 / points, 0.5) / 10;
 
-    let { voronoi: rustVoronoi, heights, cellHeights, rivers, triangleHeights, coastLines } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
+    let { voronoi, heights, cellHeights, rivers, triangleHeights, coastLines } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
 
     world.heights = heights;
-    world.cellHeights = cellHeights;
-    world.points                                    = rustVoronoi.delaunay.points;
-    let circumcenters      = world.circumcenters    = rustVoronoi.circumcenters;
-    let voronoiAdjacency   = world.voronoiAdjacency = rustVoronoi.adjacent;
-    let voronoiTriangles   = world.voronoiTriangles = rustVoronoi.voronoi_triangles;
-    let voronoiPoints      = world.voronoiPoints    = rustVoronoi.voronoi_points;
-    let voronoiCellsLookup                          = rustVoronoi.voronoi_cells;
-    let neighbors /*  ~  a e s t h e t i c s  ~  */ = rustVoronoi.delaunay.neighbors;
+    world.points = voronoi.delaunay.points;
+    world.circumcenters    = voronoi.circumcenters;
+    world.voronoiAdjacency = voronoi.adjacent;
+    world.voronoiTriangles = voronoi.voronoi_triangles;
+    world.voronoiPoints    = voronoi.voronoi_points;
+    world.triangleHeights  = triangleHeights;
 
-    world.triangleHeights = triangleHeights;
-
-    world.isLand = world.triangleHeights.map(height => height >= seaLevel);
-
-    const getEdgeCoordinates = getPointFrom(circumcenters);
+    const getEdgeCoordinates = getPointFrom(world.circumcenters);
     world.coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
     world.rivers = rivers;
-
-    if (yieldHeights) return world;
+    world.cellHeights = cellHeights;
+    
+    return world;
   }
 }
 
