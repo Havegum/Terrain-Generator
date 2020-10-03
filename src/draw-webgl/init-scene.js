@@ -15,13 +15,19 @@ function initScene (gl) {
   const projectionMatrix = mat4.create();
   mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
   // NOTE: glmatrix.js always has the first argument as the destination to receive the result.
-  const modelViewMatrix = mat4.create();// Set the drawing position to the "identity" point, which is the center of the scene.
-  // Now move the drawing position a bit to where we want to start drawing the square.
-  mat4.translate(modelViewMatrix,     // destination matrix
-                 modelViewMatrix,     // matrix to translate
-                 [-0.5, -0.5, -2.85]);  // amount to translate
+  // const modelViewMatrix = mat4.create();// Set the drawing position to the "identity" point, which is the center of the scene.
+  // // Now move the drawing position a bit to where we want to start drawing the square.
+  // mat4.translate(modelViewMatrix,     // destination matrix
+  //                modelViewMatrix,     // matrix to translate
+  //                [-0.5, -0.5, -2.85]);  // amount to translate
+ // mat4.translate(modelViewMatrix,     // destination matrix
+ //                modelViewMatrix,     // matrix to translate
+ //                [0, -0.1, 0]);  // amount to translate
+ // mat4.rotateY(modelViewMatrix,
+ //              modelViewMatrix,
+ //              -Math.PI/2);
 
-  return { projectionMatrix, modelViewMatrix };
+  return { projectionMatrix };
 }
 
 

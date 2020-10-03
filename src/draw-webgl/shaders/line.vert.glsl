@@ -13,5 +13,5 @@ void main() {
   vec2 offsetA = pointA + width * (position.x * xBasis + position.y * yBasis);
   vec2 offsetB = pointB + width * (position.x * xBasis + position.y * yBasis);
   vec2 point = mix(offsetA, offsetB, position.z);
-  gl_Position = projection * modelView * vec4(point, 0, 1);
+  gl_Position = projection * modelView * vec4(point, 0.39, 1);
 }

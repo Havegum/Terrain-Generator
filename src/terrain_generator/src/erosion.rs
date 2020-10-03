@@ -102,7 +102,8 @@ pub fn plateau (points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
 }
 
 pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
-    let heights = smooth_coasts(heights, adjacent, sea_level);
+    // let heights = smooth_coasts(heights, adjacent, sea_level);
+    let heights = smooth(heights, adjacent);
     let heights = fill_sinks(heights, adjacent, sea_level);
 
     let flux = get_flux(&heights, adjacent);
@@ -126,7 +127,6 @@ pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> 
     //     let point_flux = (flux[i] + 1.).ln();
     //     height - (point_flux * erosion_rate * height_discount)
     // };
-
     let adjacent = adjacent
         .iter()
         .map(|arr| arr.iter().map(|n| heights[*n]).collect::<Vec<f64>>())
@@ -158,6 +158,29 @@ pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> 
         .enumerate()
         .map(erosion)
         .collect::<Vec<f64>>();
+
+    heights
+}
+
+pub fn smooth (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
+    let alpha = 1.;
+    let alpha = 0.66;
+
+    for (i, height) in heights.clone().into_iter().enumerate().collect::<Vec<(usize, f64)>>() {
+        let sum = adjacent[i]
+            .iter()
+            .map(|n| heights[*n])
+            .sum::<f64>() + height;
+
+        let mean = sum / (adjacent[i].len() + 1) as f64;
+
+        heights[i] = height * (1. - alpha) + mean * alpha;
+
+        for n in adjacent[i].iter() {
+            heights[*n] = heights[*n] * (1. - alpha) + mean * alpha;
+        }
+    }
+
     heights
 }
 

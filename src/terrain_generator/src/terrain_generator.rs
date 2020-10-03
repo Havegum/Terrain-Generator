@@ -135,13 +135,14 @@ impl TerrainGenerator {
         let mut heights = plateau(&voronoi.circumcenters, heights);
         log!(" ·  ✓ and plateaued");
 
+
         for _ in 0..10 {
             heights = erode(heights, &voronoi.adjacent, sea_level);
         }
-        log!(" ·  ✓ and eroded ×10");
 
+        log!(" ·  ✓ and eroded ×10");
         let cell_heights = TerrainGenerator::get_cell_heights(voronoi.delaunay.points.len() / 2, &heights, &voronoi.voronoi_points);
-        log!(" ✓ cell heights calculated");
+
 
         let triangle_heights = TerrainGenerator::get_triangle_heights(&cell_heights, &heights, &voronoi.voronoi_triangles, sea_level);
         log!(" ✓ triangle heights calculated");
