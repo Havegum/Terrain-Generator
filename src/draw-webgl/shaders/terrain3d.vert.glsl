@@ -19,8 +19,6 @@ void main(void) {
 
   highp vec3 lightDirection = normalize(vec3(0.2, .2, 1));
 
-  // highp vec4 transformedNormal = vec4(normal.xyz * vec3(1), 1.0);
-  // highp float directional = max(dot(normal.xyz, directionalVector) * 500., 0.0);
   float light = dot(normalize(normal.xyz), lightDirection);
   gl_Position = projection * modelView * position;
 

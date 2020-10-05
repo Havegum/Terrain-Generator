@@ -4,15 +4,32 @@
 	<meta charset='utf8'>
 	<meta name='viewport' content='width=device-width'>
 	<title>Terrain</title>
-
 	<link rel='icon' type='image/png' href='/favicon.png'>
-	<link rel='stylesheet' href='/global.css'>
 	<link rel='stylesheet' href='/bundle.css'>
 	<script defer src='/bundle.js'></script>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		html, body, #app {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			background-color: #333;
+		}
+
+		body {
+			padding: 8px;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+		}
+	</style>
 </head>
 
-<body>
 
-	<div id="app"></div>
+<body>
+	<div id="app" />
 </body>
 </html>
