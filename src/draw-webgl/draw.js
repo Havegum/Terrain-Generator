@@ -185,6 +185,14 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
 
   function draw () {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // Clear the canvas before we start drawing on it.
+
+    mat4.copy(modelViewMatrix, mat4.create());
+    mat4.translate(modelViewMatrix, modelViewMatrix, [.5 + camera.x, .5 + camera.y, .5]);
+    mat4.rotateZ(modelViewMatrix, modelViewMatrix, -camera.zRot);
+    mat4.rotateX(modelViewMatrix, modelViewMatrix, -camera.yRot);
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, camera.dist**2]);
+    mat4.invert(modelViewMatrix, modelViewMatrix);
+
     draw3DTerrain({
       modelViewMatrix: modelViewMatrix,
       hillColor:  color('#d3feb0'),
@@ -212,69 +220,55 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
     });
   }
 
-  draw();
 
-  const moveStep = 0.1;
+  const moveStep = 0.05;
   let camera = {
-    xRot: 0,
+    zRot: 0,
     yRot: 0,
     dist: 2,
-  }
+    x: 0,
+    y: 0,
+  };
 
-  let pending = false;
+  draw();
+
 
   return {
     translateCamera: function (command) {
-      console.log(command);
+      console.log(camera.zRot);
+      // TODO
+      // calculate relative direction of keys based on Z rotation.
       let z;
+
       switch (command) {
         case 'w':
-          z = vec4.fromValues(...modelViewMatrix.slice(8, 12)); // [x, y, z]
-          vec4.scale(z, z, moveStep);
-          mat4.translate(modelViewMatrix, modelViewMatrix, z);
+          camera.x += Math.sin(camera.zRot) * moveStep;
+          camera.y += Math.cos(camera.zRot) * moveStep;
           break;
 
         case 'a':
-          mat4.translate(modelViewMatrix, modelViewMatrix, [0.5, 0, 0]);
+          camera.x -= Math.sin(camera.zRot + Math.PI / 2) * moveStep;
+          camera.y -= Math.cos(camera.zRot + Math.PI / 2) * moveStep;
           break;
 
         case 's':
-          z = vec4.fromValues(...modelViewMatrix.slice(8, 12)); // [x, y, z]
-          vec4.scale(z, z, -moveStep);
-          mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, -0.5]);
+          camera.x -= Math.sin(camera.zRot) * moveStep;
+          camera.y -= Math.cos(camera.zRot) * moveStep;
           break;
 
         case 'd':
-          mat4.translate(modelViewMatrix, modelViewMatrix, [-0.5, 0, 0]);
+          camera.x += Math.sin(camera.zRot + Math.PI / 2) * moveStep;
+          camera.y += Math.cos(camera.zRot + Math.PI / 2) * moveStep;
           break;
       }
       draw();
     },
 
     rotateCamera: function (x, y, scale=0) {
-      camera.xRot += x * 2e-3;
+      camera.zRot += x * 2e-3;
       camera.yRot += y * 2e-3;
       camera.dist += scale * 4e-2;
-
-      if (pending) return;
-      pending = true;
-
-      mat4.copy(modelViewMatrix, mat4.create());
-      mat4.translate(modelViewMatrix, modelViewMatrix, [.5, .5, .5]);
-      // mat4.scale(modelViewMatrix, modelViewMatrix, [rot.scale, rot.scale, rot.scale]);
-      mat4.rotateZ(modelViewMatrix, modelViewMatrix, -camera.xRot);
-      mat4.rotateX(modelViewMatrix, modelViewMatrix, -camera.yRot);
-      mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, camera.dist**2]);
-      mat4.invert(modelViewMatrix, modelViewMatrix);
-      // const translation = vec4.fromValues(...modelViewMatrix.slice(12));
-      // mat4.translate(modelViewMatrix, modelViewMatrix, vec4.negate(vec4.create(), translation));
-      //
-      // mat4.rotateY(modelViewMatrix, modelViewMatrix, x * 1e-2 / Math.PI);
-      // mat4.rotateX(modelViewMatrix, modelViewMatrix, y * 1e-2 / Math.PI);
-      //
-      // mat4.translate(modelViewMatrix, modelViewMatrix, translation);
       draw();
-      pending = false;
     }
   };
 }

@@ -23,7 +23,7 @@ onMount(async () => {
   // seed = 15043459; // DEBUG THIS ONE
   console.log('seed:', seed);
   generator = new TerrainGenerator({
-    points: 2**12,
+    points: 2**10,
     seaLevel,
     seed
   });
