@@ -15,10 +15,9 @@ import roundCapJoinGeometry from './roundCapJoinGeometry.js';
 import REGL from 'regl';
 
 export default function draw (canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coastLines, rivers, cellHeights, heights) {
-  const gl = context(canvas);
-  const { projectionMatrix, modelViewMatrix } = initScene(gl);
+  const regl = REGL({ canvas, extensions: ['ANGLE_instanced_arrays'] });
+  const { projectionMatrix, modelViewMatrix } = initScene(regl._gl, canvas);
 
-  const regl = REGL({ gl, extensions: ['ANGLE_instanced_arrays'] });
 
   const triangleCount = triangles.flat().length;
 
@@ -184,7 +183,11 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
   const dist = 1;
 
   function draw () {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // Clear the canvas before we start drawing on it.
+    regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1,
+      stencil: 0
+    })
 
     mat4.copy(modelViewMatrix, mat4.create());
     mat4.translate(modelViewMatrix, modelViewMatrix, [.5 + camera.x, .5 + camera.y, .5]);
@@ -234,40 +237,8 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
 
 
   return {
-    translateCamera: function (command) {
-      console.log(camera.zRot);
-      // TODO
-      // calculate relative direction of keys based on Z rotation.
-      let z;
-
-      switch (command) {
-        case 'w':
-          camera.x += Math.sin(camera.zRot) * moveStep;
-          camera.y += Math.cos(camera.zRot) * moveStep;
-          break;
-
-        case 'a':
-          camera.x -= Math.sin(camera.zRot + Math.PI / 2) * moveStep;
-          camera.y -= Math.cos(camera.zRot + Math.PI / 2) * moveStep;
-          break;
-
-        case 's':
-          camera.x -= Math.sin(camera.zRot) * moveStep;
-          camera.y -= Math.cos(camera.zRot) * moveStep;
-          break;
-
-        case 'd':
-          camera.x += Math.sin(camera.zRot + Math.PI / 2) * moveStep;
-          camera.y += Math.cos(camera.zRot + Math.PI / 2) * moveStep;
-          break;
-      }
-      draw();
-    },
-
-    rotateCamera: function (x, y, scale=0) {
-      camera.zRot += x * 2e-3;
-      camera.yRot += y * 2e-3;
-      camera.dist += scale * 4e-2;
+    setCamera: function (_camera) {
+      camera = _camera;
       draw();
     }
   };
