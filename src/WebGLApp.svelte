@@ -1,5 +1,5 @@
 <script>
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { spring } from 'svelte/motion';
 import { TerrainGenerator } from './terrain.js';
@@ -32,7 +32,7 @@ $: {
   $camera.y = $focus.y;
 };
 
-let zoom = spring(2, {
+let zoom = spring(1.7, {
   stiffness: 0.19,
   damping: 1,
   precision: 0.001,
@@ -68,39 +68,52 @@ async function generate () {
   };
 }
 
-const minStep = .005;
+const minStep = .01;
+const pollRate = Math.round(1000 / 24);
+let stepInterval;
+const activeKeys = {};
 
-function handleKeyDown ({ key }) {
-  // TODO: Continouous keydowns
+$: Object.keys(activeKeys).length && tickMovement();
 
-  const moveStep = minStep + $camera.dist / 10;
+async function tickMovement () {
+  const boost = activeKeys['shift'] ? 1.8 : 1;
+  const moveStep = (minStep + $camera.dist / 25) * boost;
   let z = $camera.zRot;
   let x = $focus.x;
   let y = $focus.y;
 
-  switch (key) {
-    case 'w':
-      x += Math.sin(z) * moveStep;
-      y += Math.cos(z) * moveStep;
-      break;
+  let forward = 0;
+  let right = 0;
 
-    case 'a':
-      x -= Math.sin(z + Math.PI / 2) * moveStep;
-      y -= Math.cos(z + Math.PI / 2) * moveStep;
-      break;
+  if (activeKeys['w']) forward += 1;
+  if (activeKeys['s']) forward -= 1;
+  if (activeKeys['a']) right -= 1;
+  if (activeKeys['d']) right += 1;
 
-    case 's':
-      x -= Math.sin(z) * moveStep;
-      y -= Math.cos(z) * moveStep;
-      break;
-
-    case 'd':
-      x += Math.sin(z + Math.PI / 2) * moveStep;
-      y += Math.cos(z + Math.PI / 2) * moveStep;
-      break;
+  const length = Math.hypot(forward, right);
+  if (length !== 0) {
+    forward /= length;
+    right /= length;
   }
 
+  x += forward * Math.sin(z) * moveStep;
+  y += forward * Math.cos(z) * moveStep;
+  x +=   right * Math.sin(z + Math.PI / 2) * moveStep;
+  y +=   right * Math.cos(z + Math.PI / 2) * moveStep;
+
   focus.set({ x, y });
+  if (!stepInterval) stepInterval = setInterval(tickMovement, pollRate);
+}
+
+function handleKeyDown ({ key }) {
+  key = key.toLowerCase();
+  if (!activeKeys[key]) activeKeys[key] = true;
+}
+
+function handleKeyUp ({ key }) {
+  delete activeKeys[key.toLowerCase()];
+  const hasInterval = stepInterval && Object.keys(activeKeys).length === 0;
+  if (hasInterval) stepInterval = clearInterval(stepInterval);
 }
 
 function handleMouseMove (event) {
@@ -134,6 +147,7 @@ function handleScroll (event) {
 
 <svelte:window
   on:keydown={handleKeyDown}
+  on:keyup={handleKeyUp}
   on:mousedown={handleMouseDown}
   on:mouseup={handleMouseUp}
   on:mousemove={handleMouseMove}

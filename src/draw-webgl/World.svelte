@@ -13,7 +13,7 @@ export let coastLines;
 export let rivers;
 export let cellHeights;
 export let heights;
-console.log(Object.keys($$props));
+console.log('world props:', Object.keys($$props));
 
 export let camera;
 

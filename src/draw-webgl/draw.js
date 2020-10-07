@@ -59,15 +59,6 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
     count: triangleCount
   });
 
-  const segmentInstanceGeometry = [
-    [0, -0.5],
-    [1, -0.5],
-    [1,  0.5],
-    [0, -0.5],
-    [1,  0.5],
-    [0,  0.5]
-  ];
-  // TODO: FIXME
   const roundCapJoin = roundCapJoinGeometry(regl, 16);
 
   const drawCoasts = regl({
@@ -101,7 +92,7 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
       enable: false,
       mask: false,
     },
-    count: segmentInstanceGeometry.length,
+    count: roundCapJoin.count,
     instances: regl.prop('segments'),
   });
 
@@ -151,7 +142,7 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
       enable: false,
       mask: false,
     },
-    count: segmentInstanceGeometry.length,
+    count: roundCapJoin.count,
     instances: regl.prop('segments'),
   });
 
@@ -189,11 +180,18 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
       stencil: 0
     })
 
+    // CAMERA
+    // First, clear the modelViewMatrix to an identity matrix
     mat4.copy(modelViewMatrix, mat4.create());
+    // Then, move from origin [0, 0, 0] to [0.5, 0.5, 0.5], and add the camera X and Y
     mat4.translate(modelViewMatrix, modelViewMatrix, [.5 + camera.x, .5 + camera.y, .5]);
+    // Next, rotate the camera along the Z-axis (think yaw)
     mat4.rotateZ(modelViewMatrix, modelViewMatrix, -camera.zRot);
+    // Then along the Y-axis (think pitch)
     mat4.rotateX(modelViewMatrix, modelViewMatrix, -camera.yRot);
+    // Next, back the camera up by camera.distance
     mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, camera.dist**2]);
+    // And invert it to get the matrix to move the world
     mat4.invert(modelViewMatrix, modelViewMatrix);
 
     draw3DTerrain({
@@ -224,11 +222,10 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
   }
 
 
-  const moveStep = 0.05;
   let camera = {
     zRot: 0,
     yRot: 0,
-    dist: 2,
+    dist: 1,
     x: 0,
     y: 0,
   };
