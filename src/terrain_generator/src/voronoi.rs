@@ -1,4 +1,4 @@
-use delaunator::{EMPTY, Point, triangulate, Triangulation};
+use delaunator::{triangulate, Point, Triangulation, EMPTY};
 
 #[path = "utils.rs"]
 mod utils;
@@ -48,16 +48,24 @@ impl Voronoi {
     // Adapted from:
     //     https://github.com/d3/d3-delaunay/blob/master/src/voronoi.js
     //     https://github.com/d3/d3-delaunay/blob/master/src/delaunay.js
-    pub fn new (points: Vec<f64> /*, xmin: f64, ymin: f64, xmax: f64, ymax: f64*/) -> Voronoi {
+    pub fn new(points: Vec<f64> /*, xmin: f64, ymin: f64, xmax: f64, ymax: f64*/) -> Voronoi {
         utils::set_panic_hook();
-        let Triangulation { triangles, halfedges, hull } = Voronoi::triangulate(&points);
+        let Triangulation {
+            triangles,
+            halfedges,
+            hull,
+        } = Voronoi::triangulate(&points);
         let inedges = Voronoi::get_inedges(&points, &halfedges, &triangles);
         let neighbors = Voronoi::get_neighbors(&points, &inedges, &hull, &halfedges, &triangles);
         let circumcenters = Voronoi::get_circumcenters(&points, &triangles);
 
         let Adjacencies {
-            adjacent, voronoi_triangles, voronoi_points, voronoi_cells
-        } = Voronoi::get_adjacencies(&points, &circumcenters, &inedges, &halfedges, &triangles).unwrap();
+            adjacent,
+            voronoi_triangles,
+            voronoi_points,
+            voronoi_cells,
+        } = Voronoi::get_adjacencies(&points, &circumcenters, &inedges, &halfedges, &triangles)
+            .unwrap();
 
         let delaunay = Delaunay {
             points,
@@ -78,27 +86,32 @@ impl Voronoi {
         }
     }
 
-    fn triangulate (points: &Vec<f64>) -> Triangulation {
-        let struct_points: Vec<&[f64]> = points
-            .chunks_exact(2)
-            .collect();
-        let struct_points = struct_points.iter()
+    fn triangulate(points: &Vec<f64>) -> Triangulation {
+        let struct_points: Vec<&[f64]> = points.chunks_exact(2).collect();
+        let struct_points = struct_points
+            .iter()
             .map(|p| Point { x: p[0], y: p[1] })
             .collect::<Vec<_>>();
 
         triangulate(&struct_points).unwrap()
     }
 
-    fn get_inedges (points: &Vec<f64>, halfedges: &Vec<usize>, triangles: &Vec<usize>) -> Vec<usize> {
+    fn get_inedges(
+        points: &Vec<f64>,
+        halfedges: &Vec<usize>,
+        triangles: &Vec<usize>,
+    ) -> Vec<usize> {
         let mut inedges: Vec<usize> = vec![EMPTY; points.len() / 2];
         for e in 0..halfedges.len() {
             let p = triangles[if e % 3 == 2 { e - 2 } else { e + 1 }];
-            if halfedges[e] == EMPTY || inedges[p] == EMPTY { inedges[p] = e; }
+            if halfedges[e] == EMPTY || inedges[p] == EMPTY {
+                inedges[p] = e;
+            }
         }
         inedges
     }
 
-    fn get_circumcenters (points: &Vec<f64>, triangles: &Vec<usize>) -> Vec<f64> {
+    fn get_circumcenters(points: &Vec<f64>, triangles: &Vec<usize>) -> Vec<f64> {
         let n = triangles.len();
         let mut circumcenters = vec![0.0; n / 3 * 2];
         let mut i = 0;
@@ -150,8 +163,13 @@ impl Voronoi {
         circumcenters
     }
 
-    fn get_adjacencies (points: &Vec<f64>, circumcenters: &Vec<f64>, inedges: &Vec<usize>, halfedges: &Vec<usize>, triangles: &Vec<usize>) -> Result<Adjacencies, String> {
-
+    fn get_adjacencies(
+        points: &Vec<f64>,
+        circumcenters: &Vec<f64>,
+        inedges: &Vec<usize>,
+        halfedges: &Vec<usize>,
+        triangles: &Vec<usize>,
+    ) -> Result<Adjacencies, String> {
         let mut adjacent = vec![Vec::new(); circumcenters.len() / 2];
         let mut voronoi_triangles = Vec::new();
         let mut voronoi_points = vec![Vec::new(); points.len() / 2];
@@ -159,7 +177,9 @@ impl Voronoi {
 
         for i in 0..inedges.len() {
             let e0 = inedges[i];
-            if e0 == EMPTY { return Err("Coincident point".to_string()); } // coincident point
+            if e0 == EMPTY {
+                return Err("Coincident point".to_string());
+            } // coincident point
             let mut e = e0;
             let mut t;
             let mut previous_t = EMPTY;
@@ -171,22 +191,29 @@ impl Voronoi {
 
                 // Index `t` is neighbour of the previous `t`
                 if previous_t != EMPTY {
-                    if !adjacent[t].contains(&previous_t) { adjacent[t].push(previous_t); }
-                    if !adjacent[previous_t].contains(&t) { adjacent[previous_t].push(t); }
+                    if !adjacent[t].contains(&previous_t) {
+                        adjacent[t].push(previous_t);
+                    }
+                    if !adjacent[previous_t].contains(&t) {
+                        adjacent[previous_t].push(t);
+                    }
                     voronoi_triangles.extend([i, t, previous_t].iter());
                 }
                 previous_t = t;
 
                 e = if e % 3 == 2 { e - 2 } else { e + 1 };
-                if triangles[e] != i { break; } // bad triangulation
+                if triangles[e] != i {
+                    break;
+                } // bad triangulation
                 e = halfedges[e];
 
-                if e == e0 || e == EMPTY { break; }
+                if e == e0 || e == EMPTY {
+                    break;
+                }
             }
 
             voronoi_triangles.extend([i, e / 3, previous_t].iter());
         }
-
 
         Ok(Adjacencies {
             adjacent,
@@ -196,12 +223,20 @@ impl Voronoi {
         })
     }
 
-    fn get_neighbors (points: &Vec<f64>, inedges: &Vec<usize>, hull: &Vec<usize>, halfedges: &Vec<usize>, triangles: &Vec<usize>) -> Vec<Vec<usize>> {
+    fn get_neighbors(
+        points: &Vec<f64>,
+        inedges: &Vec<usize>,
+        hull: &Vec<usize>,
+        halfedges: &Vec<usize>,
+        triangles: &Vec<usize>,
+    ) -> Vec<Vec<usize>> {
         let mut neighbors = vec![Vec::new(); points.len() / 2];
         let mut hull_index = vec![EMPTY; points.len() / 2];
-        for i in 0..hull.len() { hull_index[hull[i]] = i; }
+        for i in 0..hull.len() {
+            hull_index[hull[i]] = i;
+        }
 
-        for i in 0..points.len()/2 {
+        for i in 0..points.len() / 2 {
             let e0 = inedges[i];
             let mut e = e0;
             let mut p0;
@@ -214,10 +249,14 @@ impl Voronoi {
                 e = halfedges[e];
                 if e == EMPTY {
                     let p = hull[(hull_index[i] + 1) % hull.len()];
-                    if p != p0 { neighbors[i].push(p); }
+                    if p != p0 {
+                        neighbors[i].push(p);
+                    }
                     break;
                 }
-                if e == e0 { break; }
+                if e == e0 {
+                    break;
+                }
             }
         }
         neighbors

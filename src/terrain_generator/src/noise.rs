@@ -10,7 +10,7 @@ pub struct Noise {
 }
 
 impl Noise {
-    pub fn new (seed: u64) -> Noise {
+    pub fn new(seed: u64) -> Noise {
         let mut height = FastNoise::seeded(seed);
         height.set_noise_type(NoiseType::SimplexFractal);
         height.set_fractal_type(FractalType::FBM);
@@ -42,23 +42,23 @@ impl Noise {
         }
     }
 
-    pub fn height (&self, x: f64, y: f64) -> f64 {
+    pub fn height(&self, x: f64, y: f64) -> f64 {
         self.height.get_noise(x as f32, y as f32) as f64
     }
 
-    pub fn theta (&self, x: f64, y: f64) -> f64 {
+    pub fn theta(&self, x: f64, y: f64) -> f64 {
         self.theta.get_noise(x as f32, y as f32) as f64
     }
 
-    pub fn offset (&self, x: f64, y: f64) -> f64 {
+    pub fn offset(&self, x: f64, y: f64) -> f64 {
         self.offset.get_noise(x as f32, y as f32) as f64
     }
 
-    pub fn rng (&mut self) -> f64 {
+    pub fn rng(&mut self) -> f64 {
         self.uniform.rand::<f64>()
     }
 
-    pub fn fractal_noise (&self, x: f64, y: f64) -> f64 {
+    pub fn fractal_noise(&self, x: f64, y: f64) -> f64 {
         let force = 0.25; // magic
         let wavyness = 5e-1; // magic
 

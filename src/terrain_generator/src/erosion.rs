@@ -1,4 +1,4 @@
-pub fn get_flux (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
+pub fn get_flux(heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
     let mut flux = vec![0.; heights.len()];
 
     let mut sorted = heights
@@ -10,11 +10,17 @@ pub fn get_flux (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
 
     // find downhill for each point.
     for &(k, height) in sorted.iter().rev() {
-        let mut lowest:Option<usize> = None;
+        let mut lowest: Option<usize> = None;
         for &n in adjacent[k].iter() {
             if heights[n] < height {
                 lowest = Some(match lowest {
-                    Some(low) => if heights[n] < heights[low] { n } else { low },
+                    Some(low) => {
+                        if heights[n] < heights[low] {
+                            n
+                        } else {
+                            low
+                        }
+                    }
                     None => n,
                 });
             }
@@ -26,7 +32,7 @@ pub fn get_flux (heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
     flux
 }
 
-pub fn fill_sinks (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
+pub fn fill_sinks(heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
     // Mewo implementation details: https://mewo2.com/notes/terrain/
     // Original paper: https://horizon.documentation.ird.fr/exl-doc/pleins_textes/pleins_textes_7/sous_copyright/010031925.pdf
     let epsilon = 1e-5;
@@ -34,14 +40,16 @@ pub fn fill_sinks (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64
     let mut new_heights: Vec<f64> = heights
         .clone()
         .iter()
-        .map(|&height| if height > sea_level { f64::INFINITY } else { height })
+        .map(|&height| {
+            if height > sea_level {
+                f64::INFINITY
+            } else {
+                height
+            }
+        })
         .collect();
 
-    let mut sorted: Vec<(usize, f64)> = heights
-        .clone()
-        .into_iter()
-        .enumerate()
-        .collect();
+    let mut sorted: Vec<(usize, f64)> = heights.clone().into_iter().enumerate().collect();
     sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
 
     let mut changed = true;
@@ -49,7 +57,9 @@ pub fn fill_sinks (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64
         changed = false;
 
         for &(i, height) in sorted.iter() {
-            if new_heights[i] == height { continue; }
+            if new_heights[i] == height {
+                continue;
+            }
 
             let neighbors = &adjacent[i];
             for &neighbor in neighbors.iter() {
@@ -72,20 +82,22 @@ pub fn fill_sinks (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64
     new_heights
 }
 
-
-pub fn plateau (points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
+pub fn plateau(points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
     let plateau_start = 0.45; // Magic
     let plateau_cap = (1. - plateau_start) / 4.; // Magic
 
     let mut peak_index = 0;
     for (j, &height) in heights.iter().enumerate() {
-        if height > heights[peak_index] { peak_index = j; }
+        if height > heights[peak_index] {
+            peak_index = j;
+        }
     }
     let peak_x = points[peak_index * 2 + 0];
     let peak_y = points[peak_index * 2 + 1];
 
     let interpolate = |i: f64| {
-        plateau_start + (1. - (1. - (i - plateau_start) / (1. - plateau_start)).powi(2)) * plateau_cap
+        plateau_start
+            + (1. - (1. - (i - plateau_start) / (1. - plateau_start)).powi(2)) * plateau_cap
     };
 
     for i in 0..heights.len() {
@@ -101,7 +113,7 @@ pub fn plateau (points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
     heights
 }
 
-pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
+pub fn erode(heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
     // let heights = smooth_coasts(heights, adjacent, sea_level);
     let heights = smooth(heights, adjacent);
     let heights = fill_sinks(heights, adjacent, sea_level);
@@ -141,7 +153,7 @@ pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> 
             let low = adjacent[i]
                 .iter()
                 .cloned()
-                .fold(0./0., f64::min)
+                .fold(0. / 0., f64::min)
                 .min(height);
 
             let eroded = height - erosion;
@@ -162,15 +174,17 @@ pub fn erode (heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> 
     heights
 }
 
-pub fn smooth (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
+pub fn smooth(mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
     let alpha = 1.;
     let alpha = 0.66;
 
-    for (i, height) in heights.clone().into_iter().enumerate().collect::<Vec<(usize, f64)>>() {
-        let sum = adjacent[i]
-            .iter()
-            .map(|n| heights[*n])
-            .sum::<f64>() + height;
+    for (i, height) in heights
+        .clone()
+        .into_iter()
+        .enumerate()
+        .collect::<Vec<(usize, f64)>>()
+    {
+        let sum = adjacent[i].iter().map(|n| heights[*n]).sum::<f64>() + height;
 
         let mean = sum / (adjacent[i].len() + 1) as f64;
 
@@ -184,7 +198,11 @@ pub fn smooth (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
     heights
 }
 
-pub fn smooth_coasts (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
+pub fn smooth_coasts(
+    mut heights: Vec<f64>,
+    adjacent: &Vec<Vec<usize>>,
+    sea_level: f64,
+) -> Vec<f64> {
     let alpha = 0.25;
     let mut sorted = heights
         .clone()
@@ -192,15 +210,19 @@ pub fn smooth_coasts (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_lev
         .enumerate()
         .collect::<Vec<(usize, f64)>>();
 
-    sorted.sort_unstable_by(|(_, a), (_, b)| (a - sea_level).abs().partial_cmp(&(b - sea_level).abs()).unwrap());
+    sorted.sort_unstable_by(|(_, a), (_, b)| {
+        (a - sea_level)
+            .abs()
+            .partial_cmp(&(b - sea_level).abs())
+            .unwrap()
+    });
 
     for &(i, height) in sorted.iter() {
-        if (height - sea_level).abs() > 0.015 { break; }
+        if (height - sea_level).abs() > 0.015 {
+            break;
+        }
 
-        let sum = adjacent[i]
-            .iter()
-            .map(|n| heights[*n])
-            .sum::<f64>() + height;
+        let sum = adjacent[i].iter().map(|n| heights[*n]).sum::<f64>() + height;
 
         let mean = sum / (adjacent[i].len() + 1) as f64;
 
@@ -212,5 +234,4 @@ pub fn smooth_coasts (mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_lev
     }
 
     heights
-
 }

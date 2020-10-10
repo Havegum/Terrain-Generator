@@ -1,11 +1,7 @@
 use std::collections::HashSet;
 use std::iter::FromIterator;
 
-fn get_coast_cells (
-    heights: &Vec<f64>,
-    neighbors: &Vec<Vec<usize>>,
-    sea_level: f64,
-) -> Vec<usize> {
+fn get_coast_cells(heights: &Vec<f64>, neighbors: &Vec<Vec<usize>>, sea_level: f64) -> Vec<usize> {
     let mut coasts = Vec::new();
 
     for i in 0..heights.len() {
@@ -20,7 +16,7 @@ fn get_coast_cells (
     coasts
 }
 
-pub fn get_coast_lines (
+pub fn get_coast_lines(
     heights: &Vec<f64>,
     neighbors: &Vec<Vec<usize>>,
     voronoi_points: &Vec<Vec<usize>>,
@@ -40,14 +36,18 @@ pub fn get_coast_lines (
             let is_border = voronoi_cells[point].iter().any(|&c| heights[c] < sea_level);
 
             if is_border & prev_is_border {
-                let point_neighbors: HashSet<usize> = HashSet::from_iter(voronoi_cells[point]
-                    .iter()
-                    .filter(|&x| heights[*x] < sea_level)
-                    .cloned());
-                let prev_neighbors:  HashSet<usize> = HashSet::from_iter(voronoi_cells[prev ]
-                    .iter()
-                    .filter(|&x| heights[*x] < sea_level)
-                    .cloned());
+                let point_neighbors: HashSet<usize> = HashSet::from_iter(
+                    voronoi_cells[point]
+                        .iter()
+                        .filter(|&x| heights[*x] < sea_level)
+                        .cloned(),
+                );
+                let prev_neighbors: HashSet<usize> = HashSet::from_iter(
+                    voronoi_cells[prev]
+                        .iter()
+                        .filter(|&x| heights[*x] < sea_level)
+                        .cloned(),
+                );
 
                 if !point_neighbors.is_disjoint(&prev_neighbors) {
                     coast_lines.push((point, prev));
