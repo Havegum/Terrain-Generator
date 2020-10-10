@@ -15,7 +15,7 @@ macro_rules! log {
 // Implement _init from here:
 // https://github.com/d3/d3-delaunay/blob/master/src/voronoi.js
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 pub struct Voronoi {
     pub circumcenters: Vec<f64>,
     pub delaunay: Delaunay,
@@ -26,7 +26,7 @@ pub struct Voronoi {
 }
 
 // #[wasm_bindgen]
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 pub struct Delaunay {
     pub points: Vec<f64>,
     pub hull: Vec<usize>,
