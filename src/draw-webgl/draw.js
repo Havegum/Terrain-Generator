@@ -1,6 +1,3 @@
-import terrainVertShader from './shaders/terrain.vert.glsl';
-import terrainFragShader from './shaders/terrain.frag.glsl';
-
 import terrain3dVertShader from './shaders/terrain3d.vert.glsl';
 import terrain3dFragShader from './shaders/terrain3d.frag.glsl';
 
@@ -8,50 +5,18 @@ import lineVertShader from './shaders/line.vert.glsl';
 import lineFragShader from './shaders/line.frag.glsl';
 import varyingWidthLineVertShader from './shaders/varyingWidthLine.vert.glsl';
 
-import { interpolateYlGn as interpolateLand, interpolatePuBu as interpolateSea } from 'd3-scale-chromatic';
 import { context } from 'gl-util';
 import initScene from './init-scene.js';
-import { mat4 } from 'gl-matrix';
-
+import { mat4, vec4 } from 'gl-matrix';
+import { color, normal } from './utils.js';
 import { extent } from 'd3-array';
 
 import roundCapJoinGeometry from './roundCapJoinGeometry.js';
 import REGL from 'regl';
-import reglCamera from 'regl-camera';
 
-function normal (arr) {
-  const [p1, p2, p3] = arr;
-  const normal = new Array(3);
-
-  // Set Vector U to (Triangle.p2 minus Triangle.p1)
-  const U = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
-  // Set Vector V to (Triangle.p3 minus Triangle.p1)
-  const V = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
-
-  // Set Normal.x to (multiply U.y by V.z) minus (multiply U.z by V.y)
-  normal[0] = U[1] * V[2] - U[2] * V[1];
-  // Set Normal.y to (multiply U.z by V.x) minus (multiply U.x by V.z)
-  normal[1] = U[2] * V[0] - U[0] * V[2];
-  // Set Normal.z to (multiply U.x by V.y) minus (multiply U.y by V.x)
-  normal[2] = (U[0] * V[1] - U[1] * V[0]) * -1;
-  // Returning Normal
-  return normal.map(n => isNaN(n) ? 0 : n);
-}
-
-export default function draw (canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coasts, rivers, cellHeights, heights) {
-  const gl = context(canvas);
-  const { projectionMatrix } = initScene(gl);
-
-  const regl = REGL({ gl, extensions: ['ANGLE_instanced_arrays'] });
-
-  const camera = reglCamera(regl, {
-    center: [0.5, 0.5, 0.5],
-    up: [0, 1, 0],
-    theta: Math.PI / 2,
-    phi: -1,
-    distance: 3,
-    zoomSpeed: 2,
-  });
+export default function draw (canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coastLines, rivers, cellHeights, heights) {
+  const regl = REGL({ canvas, extensions: ['ANGLE_instanced_arrays'] });
+  const { projectionMatrix, modelViewMatrix } = initScene(regl._gl, canvas);
 
 
   const triangleCount = triangles.flat().length;
@@ -94,15 +59,6 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
     count: triangleCount
   });
 
-
-  const segmentInstanceGeometry = [
-    [0, -0.5],
-    [1, -0.5],
-    [1,  0.5],
-    [0, -0.5],
-    [1,  0.5],
-    [0,  0.5]
-  ];
   const roundCapJoin = roundCapJoinGeometry(regl, 16);
 
   const drawCoasts = regl({
@@ -136,7 +92,7 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
       enable: false,
       mask: false,
     },
-    count: segmentInstanceGeometry.length,
+    count: roundCapJoin.count,
     instances: regl.prop('segments'),
   });
 
@@ -186,7 +142,7 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
       enable: false,
       mask: false,
     },
-    count: segmentInstanceGeometry.length,
+    count: roundCapJoin.count,
     instances: regl.prop('segments'),
   });
 
@@ -213,53 +169,74 @@ export default function draw (canvas, triangles, points, circumcenters, triangle
     }).map(n => n <= riverCap ? 0 : Math.log((n - riverCap) * 5) * 4e-4)
   );
 
-  const coastBuffer = regl.buffer(coasts.flat().flat());
+  const coastBuffer = regl.buffer(coastLines.flat().flat());
 
-  let step = 0;
-  const stepIncrement = 0.001;
   const dist = 1;
 
-  regl.frame(() => {
-    step += stepIncrement;
-    camera.dirty = true;
+  function draw () {
+    regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1,
+      stencil: 0
+    })
 
-    camera(state => {
-      if (!state.dirty) return;
-      regl.clear({ color: [0, 0, 0, 1] });
+    // CAMERA
+    // First, clear the modelViewMatrix to an identity matrix
+    mat4.copy(modelViewMatrix, mat4.create());
+    // Then, move from origin [0, 0, 0] to [0.5, 0.5, 0.5], and add the camera X and Y
+    mat4.translate(modelViewMatrix, modelViewMatrix, [.5 + camera.x, .5 + camera.y, .5]);
+    // Next, rotate the camera along the Z-axis (think yaw)
+    mat4.rotateZ(modelViewMatrix, modelViewMatrix, -camera.zRot);
+    // Then along the Y-axis (think pitch)
+    mat4.rotateX(modelViewMatrix, modelViewMatrix, -camera.yRot);
+    // Next, back the camera up by camera.distance
+    mat4.translate(modelViewMatrix, modelViewMatrix, [0, 0, camera.dist**2]);
+    // And invert it to get the matrix to move the world
+    mat4.invert(modelViewMatrix, modelViewMatrix);
 
-      let view = mat4.fromValues(...state.view);
-      mat4.translate(view, view, [0.5, 0.5, 0]);
-      mat4.translate(view, view, [Math.sin(step) * dist, -Math.cos(step), 0]);
-      mat4.rotateZ(view, view, step);
-
-      mat4.translate(view, view, [-0.5, 0.5, 0]);
-
-      state.view = view;
-      draw3DTerrain({
-        modelViewMatrix: state.view,
-        hillColor:  [211/255, 254/255, 176/255, 1],
-        landColor:  [64/255, 167/255, 76/255, 1],
-        waterColor: [12/255, 196/255, 214/255, 1],
-        depthColor: [0/255, 94/255, 139/255, 1],
-        extent: [minHeight, seaLevel, maxHeight],
-      });
-
-      drawRivers({
-        points: regl.buffer(riverPoints),
-        widths: regl.buffer(riverWidths),
-        color: [13/255, 133/255, 193/255, 1],
-        modelViewMatrix: state.view,
-        segments: riverSegments
-      });
-
-      drawCoasts({
-        points: coastBuffer,
-        width: 2.5e-3,
-        color: [19/255, 59/255, 102/255, 1],
-        // color: [1, 0, 1, 1], // FOR DEBUGGING
-        segments: coasts.length,
-        modelViewMatrix: state.view
-      });
+    draw3DTerrain({
+      modelViewMatrix: modelViewMatrix,
+      hillColor:  color('#d3feb0'),
+      landColor:  color('#40a74c'),
+      waterColor: color('#0cc4d6'),
+      depthColor: color('#005e8b'),
+      extent: [minHeight, seaLevel, maxHeight],
     });
-  });
+
+    drawRivers({
+      modelViewMatrix: modelViewMatrix,
+      points: regl.buffer(riverPoints),
+      widths: regl.buffer(riverWidths),
+      color: color('#0d85c1'),
+      segments: riverSegments,
+    });
+
+    drawCoasts({
+      modelViewMatrix: modelViewMatrix,
+      points: coastBuffer,
+      width: 2.5e-3,
+      color: color('#133b66'),
+      // color: [1, 0, 1, 1], // FOR DEBUGGING
+      segments: coastLines.length,
+    });
+  }
+
+
+  let camera = {
+    zRot: 0,
+    yRot: 0,
+    dist: 1,
+    x: 0,
+    y: 0,
+  };
+
+  draw();
+
+
+  return {
+    setCamera: function (_camera) {
+      camera = _camera;
+      draw();
+    }
+  };
 }

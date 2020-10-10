@@ -1,10 +1,28 @@
-varying lowp vec4 vColor;
-varying highp vec2 vXY;
+uniform highp vec4 landColor;
+uniform highp vec4 hillColor;
+uniform highp vec4 waterColor;
+uniform highp vec4 depthColor;
+uniform highp vec3 extent;
+
+varying lowp float vLight;
+varying highp vec3 vPos;
 
 void main(void) {
-  if (vXY.x < 0.0 || vXY.y < 0.0 || vXY.x > 1.0 || vXY.y > 1.0) {
+  if (vPos.x < 0.0 || vPos.y < 0.0 || vPos.x > 1.0 || vPos.y > 1.0) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
-  gl_FragColor = vec4(vColor.rgb, 1);
+
+  highp float min = extent.x;
+  highp float seaLevel = extent.y;
+  highp float max = extent.z;
+  lowp vec4 color = vec4(0.0);
+
+  if (vPos.z > seaLevel) {
+    color = mix(landColor, hillColor, (vPos.z - seaLevel) / (max - seaLevel));
+  } else {
+    color = mix(depthColor, waterColor, (vPos.z - min) / (seaLevel - min));
+  }
+
+  gl_FragColor = vec4(color.rgb * vLight, 1);
 }

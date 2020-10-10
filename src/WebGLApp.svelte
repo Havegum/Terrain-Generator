@@ -1,87 +1,166 @@
 <script>
-import { onMount } from 'svelte';
+import { onMount, tick } from 'svelte';
+import { writable } from 'svelte/store';
+import { spring } from 'svelte/motion';
 import { TerrainGenerator } from './terrain.js';
-import draw from './draw-webgl/draw.js';
+import Canvas from './draw-webgl/Canvas.svelte';
+import World from './draw-webgl/World.svelte';
 
-let canvas;
-let canvas2d;
 let seaLevel = 0.39;
-let generator;
-let done = false;
+let generator, world;
+
+let mouseDown = false;
+let originalX = null;
+let originalY = null;
+
+let camera = writable({
+  zRot: 0,
+  yRot: 0,
+  dist: 2,
+  x: 0,
+  y: 0,
+});
+
+let focus = spring({ x: 0, y: 0 }, {
+  stiffness: 0.07,
+  damping: 0.7,
+  precision: 0.0001,
+});
+
+$: {
+  $camera.x = $focus.x;
+  $camera.y = $focus.y;
+};
+
+let zoom = spring(1.7, {
+  stiffness: 0.19,
+  damping: 1,
+  precision: 0.001,
+});
+
+$: $camera.dist = $zoom;
 
 onMount(async () => {
   let seed = Math.floor(Math.random() * 1e8);
-  // seed = 30544282;
-  // seed = 99951525;
-  // seed = 44879021;
   // seed = 15043459; // DEBUG THIS ONE
   console.log('seed:', seed);
   generator = new TerrainGenerator({
-    points: 2**14,
+    points: 2**10,
     seaLevel,
     seed
   });
 
-  const {
-    triangles, points, circumcenters, triangleHeights, coasts, rivers, cellHeights, heights
-  } = await generate();
-
-  let now = Date.now();
-  draw(canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coasts, rivers, cellHeights, heights);
-
-  canvas2d.getContext('2d').drawImage(canvas, 0, 0);
-  console.log(`✓ rendered in ${Date.now() - now}ms`);
-  done = true;
+  world = await generate();
 });
 
 async function generate () {
-  let world = await generator.generate();
-
-	let triangles = Array(world.voronoiTriangles.length / 3)
-			.fill()
-			.map((_, i) => {
-				const j = i * 3;
-				const cellIndex = world.voronoiTriangles[j + 0];
-				const nodeIndex1 = world.voronoiTriangles[j + 1];
-				const nodeIndex2 = world.voronoiTriangles[j + 2];
-
-        return [
-          cellIndex,
-          nodeIndex1,
-          nodeIndex2,
-        ];
-			});
-
+  const w = await generator.generate();
+  const heightMap = generator.generateHeightmap(100)
+	const triangles = Array(w.voronoiTriangles.length / 3)
+  	.fill()
+    .map((_, i) => i * 3)
+  	.map(j => [w.voronoiTriangles[j + 0], w.voronoiTriangles[j + 1], w.voronoiTriangles[j + 2]]);
   return {
-    triangleHeights: world.triangleHeights,
-    heights: world.heights,
-    voronoiAdjacency: world.voronoiAdjacency,
-    circumcenters: world.circumcenters,
-    rivers: world.rivers,
-    coasts: world.coastLines,
-    points: world.points,
+    ...w,
+    seaLevel,
     triangles,
-    cellHeights: world.cellHeights,
-    heightMap: new ImageData(await generator.generateHeightmap(100), 100, 100),
+    heightMap: new ImageData(await heightMap, 100, 100),
   };
 }
 
+const minStep = .01;
+const pollRate = Math.round(1000 / 24);
+let stepInterval;
+const activeKeys = {};
+
+$: Object.keys(activeKeys).length && tickMovement();
+
+async function tickMovement () {
+  const boost = activeKeys['shift'] ? 1.8 : 1;
+  const moveStep = (minStep + $camera.dist / 25) * boost;
+  let z = $camera.zRot;
+  let x = $focus.x;
+  let y = $focus.y;
+
+  let forward = 0;
+  let right = 0;
+
+  if (activeKeys['w']) forward += 1;
+  if (activeKeys['s']) forward -= 1;
+  if (activeKeys['a']) right -= 1;
+  if (activeKeys['d']) right += 1;
+
+  const length = Math.hypot(forward, right);
+  if (length !== 0) {
+    forward /= length;
+    right /= length;
+  }
+
+  x += forward * Math.sin(z) * moveStep;
+  y += forward * Math.cos(z) * moveStep;
+  x +=   right * Math.sin(z + Math.PI / 2) * moveStep;
+  y +=   right * Math.cos(z + Math.PI / 2) * moveStep;
+
+  focus.set({ x, y });
+  if (!stepInterval) stepInterval = setInterval(tickMovement, pollRate);
+}
+
+function handleKeyDown ({ key }) {
+  key = key.toLowerCase();
+  if (!activeKeys[key]) activeKeys[key] = true;
+}
+
+function handleKeyUp ({ key }) {
+  delete activeKeys[key.toLowerCase()];
+  const hasInterval = stepInterval && Object.keys(activeKeys).length === 0;
+  if (hasInterval) stepInterval = clearInterval(stepInterval);
+}
+
+function handleMouseMove (event) {
+  if (!mouseDown) return;
+  const x = event.clientX - originalX;
+  const y = event.clientY - originalY;
+
+  $camera.zRot += x * 2e-3;
+  $camera.yRot = Math.min(0, Math.max(Math.PI / -2, $camera.yRot + y * 2e-3));
+
+  originalX = event.clientX;
+  originalY = event.clientY;
+}
+
+function handleMouseDown (event) {
+  originalX = event.clientX;
+  originalY = event.clientY;
+  mouseDown = true;
+}
+
+function handleMouseUp (event) {
+  mouseDown = false;
+}
+
+function handleScroll (event) {
+  $camera.dist = Math.max(0, $camera.dist + event.deltaY * 4e-2);
+  zoom.set(Math.max(0, $zoom + event.deltaY * 8e-2));
+}
 </script>
 
-<canvas bind:this={canvas}  class="webgl" class:done width="1000" height="1000" />
-<canvas bind:this={canvas2d} class="view" class:done width="1000" height="1000" />
 
-<style>
-.webgl.done {
-  max-height: 100%;
-  width: 100%;
-  object-fit: cover;
-  /* display: none; */
-}
-.view:not(.done) {
-  display: none;
-}
-.view {
-  display:none;
-}
-</style>
+<svelte:window
+  on:keydown={handleKeyDown}
+  on:keyup={handleKeyUp}
+  on:mousedown={handleMouseDown}
+  on:mouseup={handleMouseUp}
+  on:mousemove={handleMouseMove}
+  on:wheel={handleScroll}
+/>
+
+
+<Canvas let:canvas >
+  {#if world}
+    <World
+      {canvas}
+      {...world}
+      {camera}
+    />
+  {/if}
+</Canvas>
