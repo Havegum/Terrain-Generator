@@ -13,12 +13,14 @@ extern crate web_sys;
 #[allow(unused_macros)]
 macro_rules! log {
     ( $( $t:tt )* ) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
+        if cfg![target = "wasm32-unknown-unknown"] {
+            web_sys::console::log_1(&format!( $( $t )* ).into());
+        }
     }
 }
 
 #[wasm_bindgen(readonly)]
-#[derive(Serialize)]
+#[derive(Serialize, Debug, PartialEq)]
 pub struct World {
     voronoi: Voronoi,
     heights: Vec<f64>,
@@ -35,6 +37,13 @@ pub struct World {
 }
 
 #[wasm_bindgen]
+impl World {
+    pub fn as_js_value(&self) -> JsValue {
+        JsValue::from_serde(&self).unwrap()
+    }
+}
+
+#[wasm_bindgen]
 pub struct TerrainGenerator {
     #[wasm_bindgen(skip)]
     pub noise: Noise,
@@ -44,7 +53,9 @@ pub struct TerrainGenerator {
 impl TerrainGenerator {
     #[wasm_bindgen(constructor)]
     pub fn new(seed: Option<u32>) -> TerrainGenerator {
-        utils::set_panic_hook();
+        if cfg![target = "wasm32-unknown-unknown"] {
+            utils::set_panic_hook();
+        }
 
         let seed = match seed {
             None => 123456 as u64,
@@ -125,7 +136,7 @@ impl TerrainGenerator {
         triangle_heights
     }
 
-    pub fn world(&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> JsValue {
+    pub fn world(&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> World {
         log!("`world` called");
         let points = poisson::disc_sample(radius, sea_level, width, height, self);
         log!(" ✓ points poissoned");
@@ -174,14 +185,13 @@ impl TerrainGenerator {
         );
         log!(" ✓ coasts lines carved");
 
-        let world = World {
+        World {
             voronoi,
             heights,
             cell_heights,
             rivers,
             triangle_heights,
             coast_lines,
-        };
-        JsValue::from_serde(&world).unwrap()
+        }
     }
 }

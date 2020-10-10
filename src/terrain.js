@@ -77,7 +77,7 @@ class TerrainGenerator {
 
     let radius = Math.pow(500 / points, 0.5) / 10;
 
-    let { voronoi, heights, cellHeights, rivers, triangleHeights, coastLines } = terrainGen.world(radius, seaLevel, extent.width, extent.height);
+    let { voronoi, heights, cellHeights, rivers, triangleHeights, coastLines } = terrainGen.world(radius, seaLevel, extent.width, extent.height).as_js_value();
 
     world.heights = heights;
     world.points = voronoi.delaunay.points;
