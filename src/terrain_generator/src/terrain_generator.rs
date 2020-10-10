@@ -37,6 +37,13 @@ pub struct World {
 }
 
 #[wasm_bindgen]
+impl World {
+    pub fn as_js_value(&self) -> JsValue {
+        JsValue::from_serde(&self).unwrap()
+    }
+}
+
+#[wasm_bindgen]
 pub struct TerrainGenerator {
     #[wasm_bindgen(skip)]
     pub noise: Noise,
