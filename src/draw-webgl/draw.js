@@ -14,7 +14,7 @@ import { extent } from 'd3-array';
 import roundCapJoinGeometry from './roundCapJoinGeometry.js';
 import REGL from 'regl';
 
-export default function draw (canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coastLines, rivers, cellHeights, heights) {
+export default function draw (canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights) {
   const regl = REGL({ canvas, extensions: ['ANGLE_instanced_arrays'] });
   const { projectionMatrix, modelViewMatrix } = initScene(regl._gl, canvas);
 

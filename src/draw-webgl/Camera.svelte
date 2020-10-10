@@ -1,25 +1,18 @@
 <script>
-import { onMount, tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { spring } from 'svelte/motion';
-import { TerrainGenerator } from './terrain.js';
-import Canvas from './draw-webgl/Canvas.svelte';
-import World from './draw-webgl/World.svelte';
 
-let seaLevel = 0.39;
-let generator, world;
-
-let mouseDown = false;
-let originalX = null;
-let originalY = null;
-
-let camera = writable({
+export let camera = writable({
   zRot: 0,
   yRot: 0,
   dist: 2,
   x: 0,
   y: 0,
 });
+
+let mouseDown = false;
+let originalX = null;
+let originalY = null;
 
 let focus = spring({ x: 0, y: 0 }, {
   stiffness: 0.07,
@@ -39,34 +32,6 @@ let zoom = spring(1.7, {
 });
 
 $: $camera.dist = $zoom;
-
-onMount(async () => {
-  let seed = Math.floor(Math.random() * 1e8);
-  // seed = 15043459; // DEBUG THIS ONE
-  console.log('seed:', seed);
-  generator = new TerrainGenerator({
-    points: 2**10,
-    seaLevel,
-    seed
-  });
-
-  world = await generate();
-});
-
-async function generate () {
-  const w = await generator.generate();
-  const heightMap = generator.generateHeightmap(100)
-	const triangles = Array(w.voronoiTriangles.length / 3)
-  	.fill()
-    .map((_, i) => i * 3)
-  	.map(j => [w.voronoiTriangles[j + 0], w.voronoiTriangles[j + 1], w.voronoiTriangles[j + 2]]);
-  return {
-    ...w,
-    seaLevel,
-    triangles,
-    heightMap: new ImageData(await heightMap, 100, 100),
-  };
-}
 
 const minStep = .01;
 const pollRate = Math.round(1000 / 24);
@@ -142,8 +107,8 @@ function handleScroll (event) {
   $camera.dist = Math.max(0, $camera.dist + event.deltaY * 4e-2);
   zoom.set(Math.max(0, $zoom + event.deltaY * 8e-2));
 }
-</script>
 
+</script>
 
 <svelte:window
   on:keydown={handleKeyDown}
@@ -153,14 +118,3 @@ function handleScroll (event) {
   on:mousemove={handleMouseMove}
   on:wheel={handleScroll}
 />
-
-
-<Canvas let:canvas >
-  {#if world}
-    <World
-      {canvas}
-      {...world}
-      {camera}
-    />
-  {/if}
-</Canvas>

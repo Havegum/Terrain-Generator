@@ -13,27 +13,25 @@ macro_rules! log {
 pub fn disc_sample(
     radius: f64,
     sea_level: f64,
-    width: f64,
-    height: f64,
     gen: &mut TerrainGenerator,
 ) -> Vec<f64> {
     // Stuff
 
     let size = radius / (2.0_f64).sqrt();
-    let cols = (width / size) as usize;
-    let rows = (height / size) as usize;
+    let cols = (1.0 / size) as usize;
+    let rows = (1.0 / size) as usize;
 
     let grid: Vec<Vec<[f64; 2]>> = vec![vec![]; rows * cols];
     let active: Vec<[f64; 2]> = Vec::new();
     let points: Vec<f64> = Vec::new();
 
-    let destruct = add_borders(grid, active, points, size, cols, rows, width, height);
+    let destruct = add_borders(grid, active, points, size, cols, rows, 1.0, 1.0);
     let mut grid = destruct.0;
     let mut active = destruct.1;
     let mut points = destruct.2;
 
-    let x = gen.noise.rng() * width;
-    let y = gen.noise.rng() * height;
+    let x = gen.noise.rng() * 1.0;
+    let y = gen.noise.rng() * 1.0;
     let sample = [x, y];
     let col = ((x / size) as usize).min(cols - 1);
     let row = ((y / size) as usize).min(rows - 1);
@@ -51,7 +49,7 @@ pub fn disc_sample(
         let point = &active[rand_i];
         let min_offset = size * offset_magnitude(gen.noise_single(point[0], point[1]));
         let new_points =
-            sample_poisson_points(30, size, width, height, min_offset, &point, &mut grid, gen);
+            sample_poisson_points(30, size, 1.0, 1.0, min_offset, &point, &mut grid, gen);
 
         for sample in new_points.iter() {
             points.extend(sample.iter());
@@ -75,8 +73,8 @@ fn sample_poisson_points(
 ) -> Vec<[f64; 2]> {
     let mut new_points: Vec<[f64; 2]> = vec![];
 
-    let cols = (width / size) as usize;
-    let rows = (height / size) as usize;
+    let cols = (1.0 / size) as usize;
+    let rows = (1.0 / size) as usize;
 
     for _ in 0..k {
         // Get a sample at some random angle and distance from `point`
@@ -181,11 +179,11 @@ fn add_borders(
 ) -> (Vec<Vec<[f64; 2]>>, Vec<[f64; 2]>, Vec<f64>) {
     let size = size / 2.0;
     let offset = 5e-2;
-    let cx = width / 2.0;
-    let cy = height / 2.0;
+    let cx = 1.0 / 2.0;
+    let cy = 1.0 / 2.0;
 
     // Top
-    for _x in 0..=(width / size) as usize {
+    for _x in 0..=(1.0 / size) as usize {
         let x = _x as f64 * size;
         let y = offset * -(x - cx).abs().cos();
         let pos = [x, y];
@@ -196,7 +194,7 @@ fn add_borders(
     }
 
     // Left
-    for _y in 0..=(height / size) as usize {
+    for _y in 0..=(1.0 / size) as usize {
         let y = _y as f64 * size;
         let x = offset * -(y - cy).abs().cos();
         let pos = [x, y];
@@ -207,9 +205,9 @@ fn add_borders(
     }
 
     // Bottom
-    for _x in 0..=(width / size) as usize {
+    for _x in 0..=(1.0 / size) as usize {
         let x = _x as f64 * size;
-        let y = height + offset * (x - cx).abs().cos();
+        let y = 1.0 + offset * (x - cx).abs().cos();
         let pos = [x, y];
         let i = ((x / 2.0 / size) as usize).min(cols - 1);
         grid[i + (rows - 1) * cols].push(pos);
@@ -218,9 +216,9 @@ fn add_borders(
     }
 
     // Right
-    for _y in 0..=(height / size) as usize {
+    for _y in 0..=(1.0 / size) as usize {
         let y = _y as f64 * size;
-        let x = width + offset * (y - cy).abs().cos();
+        let x = 1.0 + offset * (y - cy).abs().cos();
         let pos = [x, y];
         let j = ((y / 2.0 / size) as usize).min(cols - 1);
         grid[cols - 1 + j * cols].push(pos);

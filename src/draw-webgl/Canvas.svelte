@@ -11,7 +11,7 @@ let canvas, width, height;
   {height}
 />
 {#if canvas}
-  <slot {canvas} {width} {height} />
+  <slot {canvas} />
 {/if}
 
 

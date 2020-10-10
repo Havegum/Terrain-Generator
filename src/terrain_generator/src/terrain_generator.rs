@@ -29,9 +29,6 @@ pub struct World {
     cell_heights: Vec<f64>,
     rivers: Vec<Vec<(usize, f64)>>,
 
-    #[serde(rename = "triangleHeights")]
-    triangle_heights: Vec<f64>,
-
     #[serde(rename = "coastLines")]
     coast_lines: Vec<(usize, usize)>,
 }
@@ -136,9 +133,9 @@ impl TerrainGenerator {
         triangle_heights
     }
 
-    pub fn world(&mut self, radius: f64, sea_level: f64, width: f64, height: f64) -> World {
+    pub fn world(&mut self, radius: f64, sea_level: f64) -> World {
         log!("`world` called");
-        let points = poisson::disc_sample(radius, sea_level, width, height, self);
+        let points = poisson::disc_sample(radius, sea_level, self);
         log!(" ✓ points poissoned");
         let voronoi = Voronoi::new(points);
         log!(" ✓ voronoi triangulated");
@@ -159,13 +156,13 @@ impl TerrainGenerator {
             &voronoi.voronoi_points,
         );
 
-        let triangle_heights = TerrainGenerator::get_triangle_heights(
-            &cell_heights,
-            &heights,
-            &voronoi.voronoi_triangles,
-            sea_level,
-        );
-        log!(" ✓ triangle heights calculated");
+        // let triangle_heights = TerrainGenerator::get_triangle_heights(
+        //     &cell_heights,
+        //     &heights,
+        //     &voronoi.voronoi_triangles,
+        //     sea_level,
+        // );
+        // log!(" ✓ triangle heights calculated");
 
         let rivers = get_rivers(
             &heights,
@@ -190,7 +187,7 @@ impl TerrainGenerator {
             heights,
             cell_heights,
             rivers,
-            triangle_heights,
+            // triangle_heights,
             coast_lines,
         }
     }

@@ -6,5 +6,5 @@ pub struct Civilization {
     name: String,
     color: Color,
     resources: f64,
-    // resources: float64,
+    // resources: f64,
 }

@@ -1,23 +1,38 @@
 <script>
+import { writable } from 'svelte/store';
+import { spring } from 'svelte/motion';
+
+import Camera from './Camera.svelte';
+
 import draw from './draw.js';
 
 export let canvas;
 
 // world
 export let seaLevel;
-export let triangles;
 export let points;
 export let circumcenters;
-export let triangleHeights;
 export let coastLines;
 export let rivers;
 export let cellHeights;
 export let heights;
-console.log('world props:', Object.keys($$props));
+export let voronoiTriangles;
+// console.log('World.svelte props:', Object.keys($$props));
 
-export let camera;
 
-const { setCamera } = draw(canvas, triangles, points, circumcenters, triangleHeights, seaLevel, coastLines, rivers, cellHeights, heights);
+const triangles = Array(voronoiTriangles.length / 3)
+  .fill()
+  .map((_, i) => i * 3)
+  .map(j => [voronoiTriangles[j + 0], voronoiTriangles[j + 1], voronoiTriangles[j + 2]]);
 
-$: window.requestAnimationFrame(() => setCamera($camera));
+const getPointFrom = points => i => [points[2 * i], points[2 * i + 1]];
+const getEdgeCoordinates = getPointFrom(circumcenters);
+coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
+
+
+let camera;
+const { setCamera } = draw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
+$: if (camera) window.requestAnimationFrame(() => setCamera($camera));
 </script>
+
+<Camera bind:camera />
