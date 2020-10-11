@@ -1,26 +1,25 @@
-import terrain3dVertShader from './shaders/terrain3d.vert.glsl';
-import terrain3dFragShader from './shaders/terrain3d.frag.glsl';
-
-import lineVertShader from './shaders/line.vert.glsl';
-import lineFragShader from './shaders/line.frag.glsl';
-import varyingWidthLineVertShader from './shaders/varyingWidthLine.vert.glsl';
-
-import { context } from 'gl-util';
-import initScene from './init-scene.js';
-import { mat4, vec4 } from 'gl-matrix';
-import { color, normal } from './utils.js';
+import REGL from 'regl';
+import { mat4 } from 'gl-matrix';
 import { extent } from 'd3-array';
 
-import roundCapJoinGeometry from './roundCapJoinGeometry.js';
-import REGL from 'regl';
+import { color, normal } from './utils.js';
+import getRenderers from './renderers.js';
 
-export default function draw (canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights) {
+
+export default function initDraw (canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights) {
   const regl = REGL({ canvas, extensions: ['ANGLE_instanced_arrays'] });
-  const { projectionMatrix, modelViewMatrix } = initScene(regl._gl, canvas);
 
+  const fieldOfView = 20 * Math.PI / 180 // in radians
+  const aspect = canvas.clientWidth / canvas.clientHeight;
+  const zNear = 0.1;
+  const zFar = 100.0;
+  const projectionMatrix = mat4.perspective(mat4.create(), fieldOfView, aspect, zNear, zFar);
+  const modelViewMatrix = mat4.create();// Set the drawing position to the "identity" point, which is the center of the scene.
 
+  const { drawTerrain, drawCoasts, drawRivers } = getRenderers(regl);
+
+  // Terrain
   const triangleCount = triangles.flat().length;
-
   const zScale = z => (z - seaLevel) * 0.3 + seaLevel;
   const toCoords = ([a, b, c]) => [
     [points[a*2], points[a*2+1], zScale(cellHeights[a])],
@@ -33,119 +32,8 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
   const positions3d = Float32Array.from(triangleCoordinates.flat().flat());
   const normals3d = Float32Array.from(triangleCoordinates.map(normal).flatMap(n => [...n, ...n, ...n]));
 
-  const draw3DTerrain = regl({
-    vert: terrain3dVertShader,
-    frag: terrain3dFragShader,
-    attributes: {
-      position: {
-        buffer: regl.buffer(positions3d),
-        size: 3
-      },
-      normal: {
-        buffer: regl.buffer(normals3d),
-        size: 3,
-      },
-    },
-    uniforms: {
-      projection: projectionMatrix,
-      modelView: regl.prop('modelViewMatrix'),
-      landColor: regl.prop('landColor'),
-      hillColor: regl.prop('hillColor'),
-      waterColor: regl.prop('waterColor'),
-      depthColor: regl.prop('depthColor'),
-      zScale: regl.prop('zScale'),
-      extent: regl.prop('extent'),
-    },
-    count: triangleCount
-  });
-
-  const roundCapJoin = roundCapJoinGeometry(regl, 16);
-
-  const drawCoasts = regl({
-    vert: lineVertShader,
-    frag: lineFragShader,
-    attributes: {
-      position: {
-        buffer: roundCapJoin.buffer,
-        divisor: 0,
-      },
-      pointA: {
-        buffer: regl.prop('points'),
-        divisor: 1,
-        offset: Float32Array.BYTES_PER_ELEMENT * 0,
-        stride: Float32Array.BYTES_PER_ELEMENT * 4,
-      },
-      pointB: {
-        buffer: regl.prop('points'),
-        divisor: 1,
-        offset: Float32Array.BYTES_PER_ELEMENT * 2,
-        stride: Float32Array.BYTES_PER_ELEMENT * 4,
-      },
-    },
-    uniforms: {
-      width: regl.prop('width'),
-      color: regl.prop('color'),
-      projection: projectionMatrix,
-      modelView: regl.prop('modelViewMatrix'),
-    },
-    depth: {
-      enable: false,
-      mask: false,
-    },
-    count: roundCapJoin.count,
-    instances: regl.prop('segments'),
-  });
-
-  const drawRivers = regl({
-    vert: varyingWidthLineVertShader,
-    frag: lineFragShader,
-    attributes: {
-      position: {
-        buffer: roundCapJoin.buffer,
-        divisor: 0,
-      },
-      pointA: {
-        buffer: regl.prop('points'),
-        divisor: 1,
-        size: 3,
-        offset: Float32Array.BYTES_PER_ELEMENT * 0,
-        stride: Float32Array.BYTES_PER_ELEMENT * 6,
-      },
-      pointB: {
-        buffer: regl.prop('points'),
-        divisor: 1,
-        size: 3,
-        offset: Float32Array.BYTES_PER_ELEMENT * 3,
-        stride: Float32Array.BYTES_PER_ELEMENT * 6,
-      },
-      widthA: {
-        buffer: regl.prop('widths'),
-        divisor: 1,
-        offset: Float32Array.BYTES_PER_ELEMENT * 0,
-        stride: Float32Array.BYTES_PER_ELEMENT * 2,
-        size: 1,
-      },
-      widthB: {
-        buffer: regl.prop('widths'),
-        divisor: 1,
-        offset: Float32Array.BYTES_PER_ELEMENT * 1,
-        stride: Float32Array.BYTES_PER_ELEMENT * 2,
-        size: 1,
-      }
-    },
-    uniforms: {
-      color: regl.prop('color'),
-      projection: projectionMatrix,
-      modelView: regl.prop('modelViewMatrix'),
-    },
-    depth: {
-      enable: false,
-      mask: false,
-    },
-    count: roundCapJoin.count,
-    instances: regl.prop('segments'),
-  });
-
+  // Rivers
+  const riverCap = 80;
   const riverSegments = rivers.reduce((sum, next) => sum + next.length - 1, 0) - 1;
   const riverPoints = rivers.flatMap(river =>
     river.flatMap((part, i, arr) => {
@@ -161,7 +49,6 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
       return [x1, y1, z1, x2, y2, z2];
     })
   );
-  const riverCap = 80;
   const riverWidths = rivers.flatMap(river =>
     river.flatMap((part, i, arr) => {
       if (i === arr.length - 1) return [];
@@ -169,18 +56,16 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
     }).map(n => n <= riverCap ? 0 : Math.log((n - riverCap) * 5) * 4e-4)
   );
 
+  // Coasts
   const coastBuffer = regl.buffer(coastLines.flat().flat());
 
-  const dist = 1;
-
-  function draw () {
+  function draw (camera) {
     regl.clear({
       color: [0, 0, 0, 1],
       depth: 1,
-      stencil: 0
     })
 
-    // CAMERA
+    // Camera
     // First, clear the modelViewMatrix to an identity matrix
     mat4.copy(modelViewMatrix, mat4.create());
     // Then, move from origin [0, 0, 0] to [0.5, 0.5, 0.5], and add the camera X and Y
@@ -194,16 +79,21 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
     // And invert it to get the matrix to move the world
     mat4.invert(modelViewMatrix, modelViewMatrix);
 
-    draw3DTerrain({
+    drawTerrain({
+      positions: positions3d,
+      normals: normals3d,
+      projectionMatrix: projectionMatrix,
       modelViewMatrix: modelViewMatrix,
       hillColor:  color('#d3feb0'),
       landColor:  color('#40a74c'),
       waterColor: color('#0cc4d6'),
       depthColor: color('#005e8b'),
       extent: [minHeight, seaLevel, maxHeight],
+      count: triangleCount,
     });
 
     drawRivers({
+      projectionMatrix: projectionMatrix,
       modelViewMatrix: modelViewMatrix,
       points: regl.buffer(riverPoints),
       widths: regl.buffer(riverWidths),
@@ -212,6 +102,7 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
     });
 
     drawCoasts({
+      projectionMatrix: projectionMatrix,
       modelViewMatrix: modelViewMatrix,
       points: coastBuffer,
       width: 2.5e-3,
@@ -221,22 +112,13 @@ export default function draw (canvas, triangles, points, circumcenters, seaLevel
     });
   }
 
-
-  let camera = {
+  draw({
     zRot: 0,
     yRot: 0,
     dist: 1,
     x: 0,
     y: 0,
-  };
+  });
 
-  draw();
-
-
-  return {
-    setCamera: function (_camera) {
-      camera = _camera;
-      draw();
-    }
-  };
+  return draw;
 }

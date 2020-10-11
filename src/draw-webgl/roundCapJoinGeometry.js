@@ -25,8 +25,6 @@ export default function roundCapJoinGeometry (regl, resolution) {
     instanceRoundRound.push([0.5 * Math.cos(theta1), 0.5 * Math.sin(theta1), 1]);
   }
 
-  console.log(instanceRoundRound);
-
   return {
     buffer: regl.buffer(instanceRoundRound),
     count: instanceRoundRound.length,

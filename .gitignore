@@ -5,3 +5,4 @@ public/*.wasm
 Cargo.lock
 src/*/target
 _*
+target

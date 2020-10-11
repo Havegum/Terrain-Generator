@@ -1,6 +1,7 @@
 <script>
 import { writable } from 'svelte/store';
 import { spring } from 'svelte/motion';
+const isFirefox = navigator.userAgent.search('Firefox') > -1;
 
 export let camera = writable({
   zRot: 0,
@@ -105,7 +106,7 @@ function handleMouseUp (event) {
 
 function handleScroll (event) {
   $camera.dist = Math.max(0, $camera.dist + event.deltaY * 4e-2);
-  zoom.set(Math.max(0, $zoom + event.deltaY * 8e-2));
+  zoom.set(Math.max(0, $zoom + event.deltaY * (isFirefox ? 8e-2 : 2e-3)));
 }
 
 </script>

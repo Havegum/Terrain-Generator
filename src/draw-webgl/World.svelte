@@ -4,7 +4,7 @@ import { spring } from 'svelte/motion';
 
 import Camera from './Camera.svelte';
 
-import draw from './draw.js';
+import initDraw from './draw.js';
 
 export let canvas;
 
@@ -31,8 +31,8 @@ coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 
 let camera;
-const { setCamera } = draw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
-$: if (camera) window.requestAnimationFrame(() => setCamera($camera));
+const draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
+$: if (camera) window.requestAnimationFrame(() => draw($camera));
 </script>
 
 <Camera bind:camera />
