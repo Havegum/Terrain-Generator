@@ -93,7 +93,7 @@ pub fn get_rivers(
     let flux = get_flux(heights, adjacent);
 
     let mut points_by_height = (0..heights.len()).collect::<Vec<usize>>();
-    points_by_height.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    points_by_height.sort_unstable_by(|a, b| heights[*a].partial_cmp(&heights[*b]).unwrap());
 
     let mut visited = vec![false; heights.len()];
     let mut rivers: Vec<River> = Vec::new();
