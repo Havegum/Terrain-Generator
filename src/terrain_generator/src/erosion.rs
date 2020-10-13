@@ -1,32 +1,18 @@
 pub fn get_flux(heights: &Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
-    let mut flux = vec![0.; heights.len()];
+    let mut flux = vec![0.0; heights.len()];
 
-    let mut sorted = heights
-        .clone()
-        .into_iter()
-        .enumerate()
-        .collect::<Vec<(usize, f64)>>();
-    sorted.sort_unstable_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap());
+    let mut sorted = (0..heights.len()).collect::<Vec<usize>>();
+    sorted.sort_unstable_by(|a, b| heights[*a].partial_cmp(&heights[*b]).unwrap().reverse());
 
     // find downhill for each point.
-    for &(k, height) in sorted.iter().rev() {
-        let mut lowest: Option<usize> = None;
-        for &n in adjacent[k].iter() {
-            if heights[n] < height {
-                lowest = Some(match lowest {
-                    Some(low) => {
-                        if heights[n] < heights[low] {
-                            n
-                        } else {
-                            low
-                        }
-                    }
-                    None => n,
-                });
-            }
-        }
-        if let Some(neighbor) = lowest {
-            flux[neighbor] = flux[neighbor] + flux[k] + 1.;
+    for &point in sorted.iter() {
+        let lowest_neighbour: usize = *adjacent[point]
+            .iter()
+            .min_by(|a, b| heights[**a].partial_cmp(&heights[**b]).unwrap())
+            .unwrap();
+
+        if adjacent[point].len() > 2 && heights[lowest_neighbour] < heights[point] {
+            flux[lowest_neighbour] += flux[point] + 1.0;
         }
     }
     flux
