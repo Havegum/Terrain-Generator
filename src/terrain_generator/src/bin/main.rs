@@ -4,7 +4,7 @@ fn main() {
     let points = 2u32.pow(13);
     let radius = (500.0 / points as f64).sqrt() / 10.0;
 
-    let world = terrain_gen.world(radius, 30.0, 1.0, 1.0);
+    let world = terrain_gen.world(radius, 30.0);
 
     println!("{:?}", world);
 }

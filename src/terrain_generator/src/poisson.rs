@@ -10,11 +10,7 @@ macro_rules! log {
     }
 }
 
-pub fn disc_sample(
-    radius: f64,
-    sea_level: f64,
-    gen: &mut TerrainGenerator,
-) -> Vec<f64> {
+pub fn disc_sample(radius: f64, sea_level: f64, gen: &mut TerrainGenerator) -> Vec<f64> {
     // Stuff
 
     let size = radius / (2.0_f64).sqrt();
@@ -25,13 +21,13 @@ pub fn disc_sample(
     let active: Vec<[f64; 2]> = Vec::new();
     let points: Vec<f64> = Vec::new();
 
-    let destruct = add_borders(grid, active, points, size, cols, rows, 1.0, 1.0);
+    let destruct = add_borders(grid, active, points, size, cols, rows);
     let mut grid = destruct.0;
     let mut active = destruct.1;
     let mut points = destruct.2;
 
-    let x = gen.noise.rng() * 1.0;
-    let y = gen.noise.rng() * 1.0;
+    let x = gen.noise.rng();
+    let y = gen.noise.rng();
     let sample = [x, y];
     let col = ((x / size) as usize).min(cols - 1);
     let row = ((y / size) as usize).min(rows - 1);
@@ -48,8 +44,7 @@ pub fn disc_sample(
         let rand_i = (gen.noise.rng() * active.len() as f64) as usize;
         let point = &active[rand_i];
         let min_offset = size * offset_magnitude(gen.noise_single(point[0], point[1]));
-        let new_points =
-            sample_poisson_points(30, size, 1.0, 1.0, min_offset, &point, &mut grid, gen);
+        let new_points = sample_poisson_points(30, size, min_offset, &point, &mut grid, gen);
 
         for sample in new_points.iter() {
             points.extend(sample.iter());
@@ -64,8 +59,6 @@ pub fn disc_sample(
 fn sample_poisson_points(
     k: usize,
     size: f64,
-    width: f64,
-    height: f64,
     min_offset: f64,
     point: &[f64; 2],
     grid: &mut Vec<Vec<[f64; 2]>>,
@@ -174,8 +167,6 @@ fn add_borders(
     size: f64,
     cols: usize,
     rows: usize,
-    width: f64,
-    height: f64,
 ) -> (Vec<Vec<[f64; 2]>>, Vec<[f64; 2]>, Vec<f64>) {
     let size = size / 2.0;
     let offset = 5e-2;
