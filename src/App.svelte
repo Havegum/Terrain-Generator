@@ -6,7 +6,8 @@ import TerrainGenerator from './terrain.js';
 import Canvas from './draw-webgl/Canvas.svelte';
 import World from './draw-webgl/World.svelte';
 
-let seaLevel = 0.39;
+const seaLevel = process.env.SEA_LEVEL || 0.39;
+const points = process.env.WORLD_POINTS || 2**10;
 let generator, world;
 
 onMount(async () => {
@@ -14,7 +15,7 @@ onMount(async () => {
   // seed = 15043459; // DEBUG THIS ONE
   console.log('seed:', seed);
   generator = new TerrainGenerator(seed);
-  world = await generator.generate({ points: 2**10, seaLevel });
+  world = await generator.generate({ points, seaLevel });
 });
 </script>
 

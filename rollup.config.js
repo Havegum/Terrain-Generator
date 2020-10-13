@@ -5,11 +5,33 @@ import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 import { string } from 'rollup-plugin-string';
 import rust from '@wasm-tool/rollup-plugin-rust';
-import json from '@rollup/plugin-json';
+import replace from '@rollup/plugin-replace';
 
-import autoPreprocess from 'svelte-preprocess';
-
+import dotenv from 'dotenv';
+dotenv.config();
 const production = !process.env.ROLLUP_WATCH;
+
+
+function serve() {
+	let server;
+
+	function toExit() {
+		if (server) server.kill(0);
+	}
+
+	return {
+		writeBundle() {
+			if (server) return;
+			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev'], {
+				stdio: ['ignore', 'inherit', 'inherit'],
+				shell: true
+			});
+
+			process.on('SIGTERM', toExit);
+			process.on('exit', toExit);
+		}
+	};
+}
 
 export default {
 	input: 'src/main.js',
@@ -26,8 +48,15 @@ export default {
 	plugins: [
 		svelte({
 			dev: !production,			                      // Enable run-time checks when not in production
-			css: css => css.write('public/bundle.css'), // Extract CSS to separate file for performance
-			preprocess: autoPreprocess()								// SCSS support
+			css: css => css.write('bundle.css'), // Extract CSS to separate file for performance
+		}),
+
+		replace({
+			process: JSON.stringify({
+				env : {
+					WORLD_POINTS: process.env.WORLD_POINTS || null,
+				}
+			})
 		}),
 
 		resolve({
@@ -43,7 +72,8 @@ export default {
 		}),
 
 		string({ include: ['**/*.glsl'] }),
-		json(),
+
+		!production && serve(),
 		!production && livereload('public'), // Watch and autoreload if in dev
 		production && terser() 							 // Minify if in production
 	],
