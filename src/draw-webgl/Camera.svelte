@@ -3,6 +3,7 @@ import { writable } from 'svelte/store';
 import { spring } from 'svelte/motion';
 const isFirefox = navigator.userAgent.search('Firefox') > -1;
 
+export let canvas;
 export let camera = writable({
   zRot: 0,
   yRot: 0,
@@ -95,6 +96,7 @@ function handleMouseMove (event) {
 }
 
 function handleMouseDown (event) {
+  if (event.target !== canvas) return;
   originalX = event.clientX;
   originalY = event.clientY;
   mouseDown = true;
