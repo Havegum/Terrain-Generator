@@ -30,6 +30,7 @@ export default function getRenderers (regl) {
       hillColor: regl.prop('hillColor'),
       waterColor: regl.prop('waterColor'),
       depthColor: regl.prop('depthColor'),
+      cliffColor: regl.prop('cliffColor'),
       zScale: regl.prop('zScale'),
       extent: regl.prop('extent'),
     },

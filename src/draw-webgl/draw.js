@@ -108,6 +108,7 @@ export default function initDraw (canvas, triangles, points, circumcenters, seaL
       landColor:  color('#40a74c'),
       waterColor: color('#0cc4d6'),
       depthColor: color('#005e8b'),
+      cliffColor: color('#857f69'),
       extent: [minHeight, seaLevel, maxHeight],
       count: triangleCount,
     });
