@@ -24,6 +24,7 @@ canvas {
   right: 0;
   height: 100%;
   width: 100%;
+  cursor: crosshair;
   object-fit: cover;
 }
 </style>

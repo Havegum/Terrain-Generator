@@ -3,6 +3,11 @@ import { writable } from 'svelte/store';
 import { spring } from 'svelte/motion';
 
 import Camera from './Camera.svelte';
+import Controls from './Controls.svelte';
+
+let controlSettings = {
+  riverCap: 80,
+};
 
 import initDraw from './draw.js';
 
@@ -32,7 +37,9 @@ coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 let camera;
 const draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
-$: if (camera) window.requestAnimationFrame(() => draw($camera));
+$: window.requestAnimationFrame(() => draw({ settings: controlSettings }))
+$: if (camera) window.requestAnimationFrame(() => draw({ camera: $camera }));
 </script>
 
-<Camera bind:camera />
+<Camera {canvas} bind:camera />
+<Controls bind:controlSettings />

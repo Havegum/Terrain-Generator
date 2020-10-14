@@ -1,8 +1,8 @@
-import terrain3dVertShader from './shaders/terrain3d.vert.glsl';
-import terrain3dFragShader from './shaders/terrain3d.frag.glsl';
+import terrainVertShader from './shaders/terrain.vert.glsl';
+import terrainFragShader from './shaders/terrain.frag.glsl';
 
 import lineVertShader from './shaders/line.vert.glsl';
-import varyingWidthLineVertShader from './shaders/varyingWidthLine.vert.glsl';
+import riverVertShader from './shaders/river.vert.glsl';
 import lineFragShader from './shaders/line.frag.glsl';
 import roundCapJoinGeometry from './roundCapJoinGeometry.js';
 
@@ -11,8 +11,8 @@ export default function getRenderers (regl) {
   const roundCapJoin = roundCapJoinGeometry(regl, 16);
 
   const drawTerrain = regl({
-    vert: terrain3dVertShader,
-    frag: terrain3dFragShader,
+    vert: terrainVertShader,
+    frag: terrainFragShader,
     attributes: {
       position: {
         buffer: regl.prop('positions'),
@@ -74,7 +74,7 @@ export default function getRenderers (regl) {
 
 
   const drawRivers = regl({
-    vert: varyingWidthLineVertShader,
+    vert: riverVertShader,
     frag: lineFragShader,
     attributes: {
       position: {
@@ -95,15 +95,15 @@ export default function getRenderers (regl) {
         offset: Float32Array.BYTES_PER_ELEMENT * 3,
         stride: Float32Array.BYTES_PER_ELEMENT * 6,
       },
-      widthA: {
-        buffer: regl.prop('widths'),
+      fluxA: {
+        buffer: regl.prop('flux'),
         divisor: 1,
         offset: Float32Array.BYTES_PER_ELEMENT * 0,
         stride: Float32Array.BYTES_PER_ELEMENT * 2,
         size: 1,
       },
-      widthB: {
-        buffer: regl.prop('widths'),
+      fluxB: {
+        buffer: regl.prop('flux'),
         divisor: 1,
         offset: Float32Array.BYTES_PER_ELEMENT * 1,
         stride: Float32Array.BYTES_PER_ELEMENT * 2,
@@ -111,6 +111,7 @@ export default function getRenderers (regl) {
       }
     },
     uniforms: {
+      riverCap: regl.prop('riverCap'),
       color: regl.prop('color'),
       projection: regl.prop('projectionMatrix'),
       modelView: regl.prop('modelViewMatrix'),
