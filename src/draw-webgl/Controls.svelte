@@ -46,7 +46,14 @@ let expanded = false;
 }
 
 .expanded {
-  background-color: #333333bb;
+  background-color: #333333db;
+}
+
+@supports (backdrop-filter: blur(10px)) {
+  .expanded {
+    background-color: #3333337a;
+    backdrop-filter: blur(10px);
+  }
 }
 
 .settings {
