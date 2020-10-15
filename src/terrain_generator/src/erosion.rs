@@ -81,9 +81,9 @@ pub fn plateau(points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
     let peak_x = points[peak_index * 2 + 0];
     let peak_y = points[peak_index * 2 + 1];
 
-    let interpolate = |i: f64| {
+    let interpolate = |height: f64| {
         plateau_start
-            + (1. - (1. - (i - plateau_start) / (1. - plateau_start)).powi(2)) * plateau_cap
+            + (1. - (1. - (height - plateau_start) / (1. - plateau_start)).powi(2)) * plateau_cap
     };
 
     for i in 0..heights.len() {
@@ -100,42 +100,24 @@ pub fn plateau(points: &Vec<f64>, mut heights: Vec<f64>) -> Vec<f64> {
 }
 
 pub fn erode(heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> Vec<f64> {
-    // let heights = smooth_coasts(heights, adjacent, sea_level);
+    // First, smooth out the landscape a bit, and fill sinks
     let heights = smooth(heights, adjacent);
     let heights = fill_sinks(heights, adjacent, sea_level);
 
     let flux = get_flux(&heights, adjacent);
-    // let n = heights.len() as f64;
-
-    let erosion_rate = 0.015;
-    // let erosion_rate = 0.0125;
-    // let flux_exponent = 2500 as i32;
-
-    // let erosion = |(i, height): (usize, f64)| {
-    //     let underwater_discount = if height < sea_level
-    //         { 1e4_f64.powf(height - sea_level) } else { 1. };
-    //     let point_flux = 1. - (1. - flux[i] / n).powi(flux_exponent);
-    //     height - point_flux * point_flux * erosion_rate * underwater_discount
-    // };
-
-    // let erosion = |(i, height): (usize, f64)| {
-    //     let mut height_discount = height;
-    //     // let near_coast_discount = (1. - (1. - (height - sea_level).abs() * 50.)).min(1.).max(0.3);
-    //     if height < sea_level { height_discount = height_discount.powi(2) };
-    //     let point_flux = (flux[i] + 1.).ln();
-    //     height - (point_flux * erosion_rate * height_discount)
-    // };
     let adjacent = adjacent
         .iter()
         .map(|arr| arr.iter().map(|n| heights[*n]).collect::<Vec<f64>>())
         .collect::<Vec<Vec<f64>>>();
 
+    let erosion_rate = 0.015;
     let erosion = |(i, height): (usize, f64)| {
         let point_flux = (flux[i] + 1.).ln();
 
         let erosion = point_flux * erosion_rate * height;
 
         if height >= sea_level {
+            // Find lowest neighbor.
             let low = adjacent[i]
                 .iter()
                 .cloned()
@@ -145,6 +127,7 @@ pub fn erode(heights: Vec<f64>, adjacent: &Vec<Vec<usize>>, sea_level: f64) -> V
             let eroded = height - erosion;
             let alpha = 0.125;
 
+            // If erosion is lower than the lowest neighbor, discount erosion by alpha
             low.max(eroded) * (1. - alpha) + eroded * alpha
         } else {
             height - erosion * 0.25
@@ -170,44 +153,6 @@ pub fn smooth(mut heights: Vec<f64>, adjacent: &Vec<Vec<usize>>) -> Vec<f64> {
         .enumerate()
         .collect::<Vec<(usize, f64)>>()
     {
-        let sum = adjacent[i].iter().map(|n| heights[*n]).sum::<f64>() + height;
-
-        let mean = sum / (adjacent[i].len() + 1) as f64;
-
-        heights[i] = height * (1. - alpha) + mean * alpha;
-
-        for n in adjacent[i].iter() {
-            heights[*n] = heights[*n] * (1. - alpha) + mean * alpha;
-        }
-    }
-
-    heights
-}
-
-pub fn smooth_coasts(
-    mut heights: Vec<f64>,
-    adjacent: &Vec<Vec<usize>>,
-    sea_level: f64,
-) -> Vec<f64> {
-    let alpha = 0.25;
-    let mut sorted = heights
-        .clone()
-        .into_iter()
-        .enumerate()
-        .collect::<Vec<(usize, f64)>>();
-
-    sorted.sort_unstable_by(|(_, a), (_, b)| {
-        (a - sea_level)
-            .abs()
-            .partial_cmp(&(b - sea_level).abs())
-            .unwrap()
-    });
-
-    for &(i, height) in sorted.iter() {
-        if (height - sea_level).abs() > 0.015 {
-            break;
-        }
-
         let sum = adjacent[i].iter().map(|n| heights[*n]).sum::<f64>() + height;
 
         let mean = sum / (adjacent[i].len() + 1) as f64;
