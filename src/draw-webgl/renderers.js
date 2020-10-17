@@ -129,6 +129,6 @@ export default function getRenderers (regl) {
   return {
     drawTerrain,
     drawCoasts,
-    drawRivers
-  }
+    drawRivers,
+  };
 }

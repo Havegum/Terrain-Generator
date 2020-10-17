@@ -11,7 +11,7 @@ const points = process.env.WORLD_POINTS || 2**10;
 let generator, world;
 
 onMount(async () => {
-  const seed = Math.floor(Math.random() * 1e8);
+  const seed = process.env.SEED || Math.floor(Math.random() * 1e8);
   // seed = 15043459; // DEBUG THIS ONE
   console.log('seed:', seed);
   generator = new TerrainGenerator(seed);

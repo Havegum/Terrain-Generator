@@ -98,41 +98,6 @@ impl TerrainGenerator {
         cell_heights
     }
 
-    fn get_triangle_heights(
-        cell_heights: &Vec<f64>,
-        heights: &Vec<f64>,
-        voronoi_triangles: &Vec<usize>,
-        sea_level: f64,
-    ) -> Vec<f64> {
-        let mut triangle_heights = vec![0.; voronoi_triangles.len() / 3];
-        for i in 0..triangle_heights.len() {
-            let j = i * 3;
-            let center_height = cell_heights[voronoi_triangles[j + 0] % cell_heights.len()];
-            let height1 = heights[voronoi_triangles[j + 1] % heights.len()];
-            let height2 = heights[voronoi_triangles[j + 2] % heights.len()];
-
-            let mut mean = (center_height + height1 + height2) / 3.;
-
-            let subsea = vec![center_height, height1, height2]
-                .into_iter()
-                .filter(|x| *x > sea_level)
-                .count();
-
-            // If the triangle is bordering sea we choose to set the value to be what the voronoi
-            // height is so land/sea borders are always around the circumference of the voronoi cells.
-            if (subsea != 3) & (subsea != 0) {
-                if center_height >= sea_level {
-                    mean = mean.max(sea_level + 1e-3);
-                } else {
-                    mean = mean.min(sea_level - 1e-3);
-                }
-            }
-            triangle_heights[i] = mean;
-        }
-
-        triangle_heights
-    }
-
     pub fn world(&mut self, radius: f64, sea_level: f64) -> World {
         log!("`world` called");
         let points = poisson::disc_sample(radius, sea_level, self);
@@ -155,14 +120,6 @@ impl TerrainGenerator {
             &heights,
             &voronoi.voronoi_points,
         );
-
-        // let triangle_heights = TerrainGenerator::get_triangle_heights(
-        //     &cell_heights,
-        //     &heights,
-        //     &voronoi.voronoi_triangles,
-        //     sea_level,
-        // );
-        // log!(" ✓ triangle heights calculated");
 
         let rivers = get_rivers(
             &heights,
@@ -187,7 +144,6 @@ impl TerrainGenerator {
             heights,
             cell_heights,
             rivers,
-            // triangle_heights,
             coast_lines,
         }
     }

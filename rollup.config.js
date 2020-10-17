@@ -47,14 +47,16 @@ export default {
 	},
 	plugins: [
 		svelte({
-			dev: !production,			                      // Enable run-time checks when not in production
-			css: css => css.write('bundle.css'), // Extract CSS to separate file for performance
+			dev: !production,
+			css: css => css.write('bundle.css'),
 		}),
 
 		replace({
 			process: JSON.stringify({
 				env : {
-					WORLD_POINTS: process.env.WORLD_POINTS || null,
+					WORLD_POINTS: +process.env.WORLD_POINTS || null,
+					SEA_LEVEL: +process.env.SEA_LEVEL || null,
+					SEED: +process.env.SEED || null,
 				}
 			})
 		}),

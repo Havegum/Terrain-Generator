@@ -18,13 +18,6 @@ export default function initDraw (canvas, triangles, points, circumcenters, seaL
 
   const { drawTerrain, drawCoasts, drawRivers } = getRenderers(regl);
 
-
-  // TODO: rust returns all the values we need.
-  // Terrain: positions and normals as flat arrays with three components per point
-  // Rivers: positions as a flat array of points. flux as a flat array.
-  //         TODO: these can probably be indexed to avoid duplication
-  // Coasts: positions as a flat array of points. These should also be indexed.
-
   // Terrain
   const triangleCount = triangles.flat().length;
   const zScale = z => (z - seaLevel) * 0.3 + seaLevel; // HACKY
