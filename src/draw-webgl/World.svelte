@@ -37,7 +37,7 @@ coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 let camera;
 const draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
-$: window.requestAnimationFrame(() => draw({ settings: controlSettings }))
+$: window.requestAnimationFrame(() => draw({ settings: controlSettings }));
 $: if (camera) window.requestAnimationFrame(() => draw({ camera: $camera }));
 </script>
 

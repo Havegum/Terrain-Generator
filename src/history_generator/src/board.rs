@@ -51,11 +51,11 @@ impl<'a> Board<'a> {
             return;
         }
 
-        if let ActionType::Occupy(occupiedCell) = action.action {
+        if let ActionType::Occupy(occupied_cell) = action.action {
             let last = self.history.last().unwrap();
 
             if let BoardMutation::Ownership { cell, prev, next } = last {
-                if next.unwrap() == action.civ && *cell == occupiedCell {
+                if next.unwrap() == action.civ && *cell == occupied_cell {
                     self.cells[*cell].owner = *prev;
                     self.history.pop();
                 }
