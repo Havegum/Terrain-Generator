@@ -16,9 +16,9 @@ async function regenerate () {
 <div class="controls" class:expanded>
   <button on:click={() => expanded = !expanded}>
     <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-      <path d="M0,0 L1,0"/>
-      <path d="M0,0.5 L1,0.5"/>
-      <path d="M0,1 L1,1"/>
+      <path vector-effect="non-scaling-stroke" d="M0,0 L1,0"/>
+      <path vector-effect="non-scaling-stroke" d="M0,0.5 L1,0.5"/>
+      <path vector-effect="non-scaling-stroke" d="M0,1 L1,1"/>
     </svg>
   </button>
 
@@ -125,7 +125,6 @@ path {
   stroke-width: 3px;
   opacity: .7;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
   transition: stroke 300ms;
 }
 </style>
