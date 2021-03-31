@@ -1,15 +1,17 @@
 <script>
 import { slide } from 'svelte/transition';
+import { createEventDispatcher } from 'svelte';
 
-export let controlSettings = {
-  riverCap: 80
-};
-
-let riverCap = 80;
-$: controlSettings.riverCap = riverCap;
+export let controlSettings;
 
 let expanded = false;
+
+const dispatch = createEventDispatcher();
+async function regenerate () {
+  dispatch('regenerate');
+}
 </script>
+
 
 <div class="controls" class:expanded>
   <button on:click={() => expanded = !expanded}>
@@ -26,12 +28,15 @@ let expanded = false;
       <hr>
       <label for="rivers">
         <p>Minimum river flux</p>
-        <input id="rivers" type="range" min="0" max="200" step="1" bind:value={riverCap}>
-        <p>{riverCap}</p>
+        <input id="rivers" type="range" min="0" max="200" step="1" bind:value={controlSettings.riverCap}>
+        <p>{controlSettings.riverCap}</p>
       </label>
+
+      <button on:click={regenerate}>Regenerate!</button>
     </section>
   {/if}
 </div>
+
 
 <style>
 .controls {

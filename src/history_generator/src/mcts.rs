@@ -3,13 +3,13 @@ use super::board::ActionType;
 use std::collections::HashMap;
 
 
-pub struct SimulatedWorld {
+pub struct Simulation {
     pub civilizations: Vec<Civilization>,
 }
 
-impl SimulatedWorld {
+impl Simulation {
     pub fn new() -> Self {
-        SimulatedWorld {
+        Simulation {
             civilizations: Vec::new(),
         }
     }
