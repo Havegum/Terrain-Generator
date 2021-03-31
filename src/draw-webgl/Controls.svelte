@@ -14,7 +14,7 @@ async function regenerate () {
 
 
 <div class="controls" class:expanded>
-  <button on:click={() => expanded = !expanded}>
+  <button class="expand" on:click={() => expanded = !expanded}>
     <svg viewBox="0 0 1 1" preserveAspectRatio="none">
       <path vector-effect="non-scaling-stroke" d="M0,0 L1,0"/>
       <path vector-effect="non-scaling-stroke" d="M0,0.5 L1,0.5"/>
@@ -67,7 +67,7 @@ async function regenerate () {
   grid-gap: 8px;
 }
 
-button {
+.expand {
   background-color: transparent;
   border: none;
   color: inherit;
@@ -79,7 +79,7 @@ button {
   border-radius: 8px;
 }
 
-button:hover {
+.expand:hover {
   background-color: #ffffff11;
 }
 
@@ -116,7 +116,7 @@ input {
   width: 100%;
 }
 
-button:hover path {
+.expand:hover path {
   opacity: 1;
 }
 
@@ -127,4 +127,19 @@ path {
   stroke-linecap: round;
   transition: stroke 300ms;
 }
+
+.settings button {
+  font-size: inherit;
+  border: none;
+  padding: 7px;
+  border-radius: 4px;
+  background-color: hsla(0, 0%, 100%, 0.1);
+  color: inherit;
+  cursor: pointer;
+}
+
+.settings button:hover {
+  background-color: hsla(0, 0%, 100%, 0.125);
+}
+
 </style>

@@ -41,7 +41,7 @@ gen(seed);
   width: 100%;
   height: 100%;
   pointer-events: none;
-  background-color: hsl(216, 3%, 30%);
+  background-color: hsl(216, 3%, 8%);
   opacity: 0;
   transition: opacity 250ms ease-out;
 }

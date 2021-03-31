@@ -2,6 +2,7 @@
 node_modules
 public/bundle.*
 public/assets
+public/terrain-worker.js
 Cargo.lock
 src/*/target
 _*
