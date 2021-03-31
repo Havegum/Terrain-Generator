@@ -1,31 +1,18 @@
-import wasm from './terrain_generator/Cargo.toml';
+const worker = new Worker('./terrain-worker.js');
 
-class TerrainGenerator {
-  constructor (seed=123456) {
-    this.wasm = new Promise((resolve, reject) => wasm()
-      .then(result => {
-        this.terrainGen = new result.TerrainGenerator(seed);
-        resolve(true);
-      }).catch(reject)
-    );
-  }
+const resolveResponse = worker => new Promise(resolve => {
+  function resolver (event) {
+    resolve(event.data);
+    worker.removeEventListener('message', resolver);
+  } 
+  worker.addEventListener('message', resolver);
+});
 
-  async generate ({ points = 2**10, seaLevel = 0.39 }={}) {
-    await this.wasm;
 
-    let radius = Math.pow(500 / points, 0.5) / 10;
-    const world = this.terrainGen.world(radius, seaLevel).as_js_value();
-
-    world.seaLevel = seaLevel;
-    world.points           = world.voronoi.delaunay.points;
-    world.circumcenters    = world.voronoi.circumcenters;
-    world.voronoiAdjacency = world.voronoi.adjacent;
-    world.voronoiTriangles = world.voronoi.voronoi_triangles;
-    world.voronoiPoints    = world.voronoi.voronoi_points;
-
-    delete world.voronoi
-    return world;
-  }
+async function generate ({ seed = 1234, points = 2**10, seaLevel = 0.39 }={}) {
+  const response = resolveResponse(worker);
+  worker.postMessage({ action: 'generate', payload: { seed }})
+  return await response;
 }
 
-export default TerrainGenerator;
+export default generate;

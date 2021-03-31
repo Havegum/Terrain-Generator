@@ -14,38 +14,48 @@ pub struct Board<'a> {
 }
 
 pub enum BoardMutation<'a> {
-    Ownership { cell: usize, prev: Option<&'a Civilization>, next: Option<&'a Civilization> },
+    Ownership {
+        cell: usize,
+        prev: Option<&'a Civilization>,
+        next: Option<&'a Civilization>,
+    },
     None,
 }
 
 impl<'a> Board<'a> {
     pub fn new(cells: Vec<BoardCell>, adjacencies: Vec<Vec<usize>>) -> Board {
-        Board { cells, adjacencies, history: Vec::new() }
+        Board {
+            cells,
+            adjacencies,
+            history: Vec::new(),
+        }
     }
 
-    pub fn r#do(&mut self, action: SimulatedAction<'a >) {
-        if !action.successful { return; }
+    pub fn r#do(&mut self, action: SimulatedAction<'a>) {
+        if !action.successful {
+            return;
+        }
 
         if let ActionType::Occupy(cell) = action.action {
             self.cells[cell].owner = Some(action.civ);
-            self.history.push(
-                BoardMutation::Ownership {
-                    cell: cell,
-                    prev: self.cells[cell].owner,
-                    next: Some(action.civ),
-                }
-            );
+            self.history.push(BoardMutation::Ownership {
+                cell: cell,
+                prev: self.cells[cell].owner,
+                next: Some(action.civ),
+            });
         }
     }
 
     pub fn undo(&mut self, action: &SimulatedAction) {
-        if !action.successful { return; }
+        if !action.successful {
+            return;
+        }
 
-        if let ActionType::Occupy(occupiedCell) = action.action {
+        if let ActionType::Occupy(occupied_cell) = action.action {
             let last = self.history.last().unwrap();
 
             if let BoardMutation::Ownership { cell, prev, next } = last {
-                if next.unwrap() == action.civ && *cell == occupiedCell {
+                if next.unwrap() == action.civ && *cell == occupied_cell {
                     self.cells[*cell].owner = *prev;
                     self.history.pop();
                 }

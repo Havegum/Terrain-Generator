@@ -1,6 +1,7 @@
 mod board;
 mod civ;
 mod utils;
+mod mcts;
 
 use wasm_bindgen::prelude::*;
 

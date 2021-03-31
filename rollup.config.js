@@ -33,53 +33,60 @@ function serve() {
 	};
 }
 
-export default {
-	input: 'src/main.js',
-	output: {
-		sourcemap: true,
-		format: 'iife',
-		name: 'app',
-		file: 'public/bundle.js',
+const plugins = [
+	svelte({
+		dev: !production,			         // Enable run-time checks when not in production
+		css: css => css.write('bundle.css'), // Extract CSS to separate file for performance
+	}),
+
+	replace({
+		process: JSON.stringify({
+			env : {
+				WORLD_POINTS: process.env.WORLD_POINTS || null,
+			}
+		})
+	}),
+
+	resolve({
+		browser: true,
+		dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/'),
+	}),
+
+	commonjs(),
+	rust({ verbose: !production }),
+	string({ include: ['**/*.glsl'] })
+];
+
+export default [
+	{
+		input: 'src/terrain-worker.js',
+		output: {
+			format: 'cjs',
+			name: 'worker',
+			file: 'public/terrain-worker.js',
+		},
+		plugins: plugins,
 	},
-	onwarn: function (warning, warn) {
-  		if (warning.code === 'CIRCULAR_DEPENDENCY') return;
-  		warn(warning);
-	},
-	plugins: [
-		svelte({
-			dev: !production,
-			css: css => css.write('bundle.css'),
-		}),
-
-		replace({
-			process: JSON.stringify({
-				env : {
-					WORLD_POINTS: +process.env.WORLD_POINTS || null,
-					SEA_LEVEL: +process.env.SEA_LEVEL || null,
-					SEED: +process.env.SEED || null,
-				}
-			})
-		}),
-
-		resolve({
-			browser: true,
-			dedupe: importee => importee === 'svelte' || importee.startsWith('svelte/'),
-		}),
-
-		commonjs(),
-
-		rust({
-	    debug: !production,
-			verbose: !production
-		}),
-
-		string({ include: ['**/*.glsl'] }),
-
-		!production && serve(),
-		!production && livereload('public'), // Watch and autoreload if in dev
-		production && terser() 							 // Minify if in production
-	],
-	watch: {
-		clearScreen: false
+	{
+		input: 'src/main.js',
+		output: {
+			sourcemap: true,
+			format: 'iife',
+			name: 'app',
+			file: 'public/bundle.js',
+		},
+		onwarn: function (warning, warn) {
+			if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+			warn(warning);
+		},
+		plugins: [
+			...plugins,
+			!production && serve(),
+			!production && livereload('public'), // Watch and autoreload if in dev
+			production && terser() 				 // Minify if in production
+		],
+		watch: {
+			clearScreen: false
+		}
 	}
-};
+];

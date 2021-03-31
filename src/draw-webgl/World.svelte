@@ -1,13 +1,5 @@
 <script>
-import { writable } from 'svelte/store';
-import { spring } from 'svelte/motion';
-
 import Camera from './Camera.svelte';
-import Controls from './Controls.svelte';
-
-let controlSettings = {
-  riverCap: 80,
-};
 
 import initDraw from './draw.js';
 
@@ -22,24 +14,23 @@ export let rivers;
 export let cellHeights;
 export let heights;
 export let voronoiTriangles;
-// console.log('World.svelte props:', Object.keys($$props));
+export let controlSettings;
 
 
-const triangles = Array(voronoiTriangles.length / 3)
+$: triangles = Array(voronoiTriangles.length / 3)
   .fill()
   .map((_, i) => i * 3)
   .map(j => [voronoiTriangles[j + 0], voronoiTriangles[j + 1], voronoiTriangles[j + 2]]);
 
-const getPointFrom = points => i => [points[2 * i], points[2 * i + 1]];
-const getEdgeCoordinates = getPointFrom(circumcenters);
-coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
+$: getPointFrom = points => i => [points[2 * i], points[2 * i + 1]];
+$: getEdgeCoordinates = getPointFrom(circumcenters);
+$: coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 
 let camera;
-const draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
-$: window.requestAnimationFrame(() => draw({ settings: controlSettings }))
+$: draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
+$: window.requestAnimationFrame(() => draw({ settings: controlSettings }));
 $: if (camera) window.requestAnimationFrame(() => draw({ camera: $camera }));
 </script>
 
 <Camera {canvas} bind:camera />
-<Controls bind:controlSettings />

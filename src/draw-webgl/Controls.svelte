@@ -1,22 +1,24 @@
 <script>
 import { slide } from 'svelte/transition';
+import { createEventDispatcher } from 'svelte';
 
-export let controlSettings = {
-  riverCap: 80
-};
-
-let riverCap = 80;
-$: controlSettings.riverCap = riverCap;
+export let controlSettings;
 
 let expanded = false;
+
+const dispatch = createEventDispatcher();
+async function regenerate () {
+  dispatch('regenerate');
+}
 </script>
+
 
 <div class="controls" class:expanded>
   <button on:click={() => expanded = !expanded}>
     <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-      <path d="M0,0 L1,0"/>
-      <path d="M0,0.5 L1,0.5"/>
-      <path d="M0,1 L1,1"/>
+      <path vector-effect="non-scaling-stroke" d="M0,0 L1,0"/>
+      <path vector-effect="non-scaling-stroke" d="M0,0.5 L1,0.5"/>
+      <path vector-effect="non-scaling-stroke" d="M0,1 L1,1"/>
     </svg>
   </button>
 
@@ -26,12 +28,15 @@ let expanded = false;
       <hr>
       <label for="rivers">
         <p>Minimum river flux</p>
-        <input id="rivers" type="range" min="0" max="200" step="1" bind:value={riverCap}>
-        <p>{riverCap}</p>
+        <input id="rivers" type="range" min="0" max="200" step="1" bind:value={controlSettings.riverCap}>
+        <p>{controlSettings.riverCap}</p>
       </label>
+
+      <button on:click={regenerate}>Regenerate!</button>
     </section>
   {/if}
 </div>
+
 
 <style>
 .controls {
@@ -120,7 +125,6 @@ path {
   stroke-width: 3px;
   opacity: .7;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
   transition: stroke 300ms;
 }
 </style>

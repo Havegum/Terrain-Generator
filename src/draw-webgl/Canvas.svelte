@@ -10,6 +10,7 @@ let canvas, width, height;
   {width}
   {height}
 />
+
 {#if canvas}
   <slot {canvas} />
 {/if}
