@@ -11,7 +11,13 @@ const resolveResponse = worker => new Promise(resolve => {
 
 async function generate ({ seed = 1234, points = 2**10, seaLevel = 0.39 }={}) {
   const response = resolveResponse(worker);
-  worker.postMessage({ action: 'generate', payload: { seed }})
+  worker.postMessage({
+    action: 'generate',
+    payload: {
+      seed,
+      options: {points, seaLevel }
+    }
+  });
   return await response;
 }
 

@@ -28,7 +28,7 @@ async function regenerate () {
       <hr>
       <label for="rivers">
         <p>Minimum river flux</p>
-        <input id="rivers" type="range" min="0" max="200" step="1" bind:value={controlSettings.riverCap}>
+        <input id="rivers" type="range" min="0" max="1000" step="1" bind:value={controlSettings.riverCap}>
         <p>{controlSettings.riverCap}</p>
       </label>
 
