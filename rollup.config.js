@@ -6,6 +6,7 @@ import { terser } from 'rollup-plugin-terser';
 import { string } from 'rollup-plugin-string';
 import rust from '@wasm-tool/rollup-plugin-rust';
 import replace from '@rollup/plugin-replace';
+import alias from '@rollup/plugin-alias';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -46,6 +47,10 @@ const plugins = [
 			}
 		})
 	}),
+	alias({
+		resolve: ['.js', '.svelte'],
+		entries: { '@': __dirname + '/src' }
+	}),
 
 	resolve({
 		browser: true,
@@ -59,7 +64,7 @@ const plugins = [
 
 export default [
 	{
-		input: 'src/terrain-worker.js',
+		input: 'src/utils/terrain-worker.js',
 		output: {
 			format: 'cjs',
 			name: 'worker',

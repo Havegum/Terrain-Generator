@@ -1,36 +1,63 @@
 <script>
-import generate from './terrain.js';
-import Canvas from './draw-webgl/Canvas.svelte';
-import Controls from './draw-webgl/Controls.svelte';
-import World from './draw-webgl/World.svelte';
+import generate from './utils/terrain.js';
+import Canvas from './components/webgl/Canvas.svelte';
+import Controls from './components/Controls.svelte';
+import RenderControls from './components/RenderControls.svelte';
+import GenerationControls from './components/GenerationControls.svelte';
+
+import World from './components/webgl/World.svelte';
 
 const rng = () => Math.floor(Math.random() * 1e8);
 const seaLevel = process.env.SEA_LEVEL || 0.39;
 const points = process.env.WORLD_POINTS || 2 ** 10;
 const seed = process.env.SEED || rng();
 
-let controlSettings = { riverCap: 80 };
+let renderer = 'webgl';
+
+let generationOptions = {
+  seaLevel,
+  points,
+  seed,
+};
+
+let renderOptions = {
+  webgl: {
+    riverCap: 80,
+  },
+  svg: {
+
+  }
+};
 
 let world, stale;
-async function gen (seed) {
+async function gen () {
   stale = true;
   // seed = 15043459; // DEBUG THIS ONE
-  console.log('seed:', seed);
-  world = await generate({ seed, points, seaLevel });
+  console.log('seed:', generationOptions.seed);
+  world = await generate(generationOptions);
   stale = false;
 }
 
-gen(seed);
+gen();
 </script>
 
 
-<Canvas let:canvas >
-  <div class="overlay" class:stale/>
-  {#if world}
-    <World {canvas} {...world} {controlSettings} />
-    <Controls bind:controlSettings on:regenerate={() => gen(rng())} />
-  {/if}
-</Canvas>
+{#if world}
+  <Canvas let:canvas >
+    <World {canvas} {...world} renderOptions={renderOptions.webgl} />
+  </Canvas>
+{/if}
+
+<div class="overlay" class:stale />
+
+<Controls>
+  <RenderControls {renderer} bind:renderOptions />
+  <GenerationControls
+    bind:generationOptions
+    on:reseed={() => generationOptions.seed = rng()}
+    on:regenerate={gen}
+  />
+</Controls>
 
 
 <style>

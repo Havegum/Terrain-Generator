@@ -1,4 +1,4 @@
-import WASM from './terrain_generator/Cargo.toml';
+import WASM from '@/wasm/terrain_generator/Cargo.toml';
 
 const wasm = WASM();
 

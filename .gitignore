@@ -1,8 +1,8 @@
 .DS_Store
 node_modules
-public/bundle.*
-public/assets
-public/terrain-worker.js
+public/*
+!public/index.html
+!public/favicon.png
 Cargo.lock
 src/*/target
 _*

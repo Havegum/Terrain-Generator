@@ -14,7 +14,7 @@ export let rivers;
 export let cellHeights;
 export let heights;
 export let voronoiTriangles;
-export let controlSettings;
+export let renderOptions;
 
 
 $: triangles = Array(voronoiTriangles.length / 3)
@@ -29,7 +29,7 @@ $: coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 let camera;
 $: draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
-$: window.requestAnimationFrame(() => draw({ settings: controlSettings }));
+$: window.requestAnimationFrame(() => draw({ settings: renderOptions }));
 $: if (camera) window.requestAnimationFrame(() => draw({ camera: $camera }));
 </script>
 

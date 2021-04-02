@@ -1,15 +1,6 @@
 <script>
 import { slide } from 'svelte/transition';
-import { createEventDispatcher } from 'svelte';
-
-export let controlSettings;
-
 let expanded = false;
-
-const dispatch = createEventDispatcher();
-async function regenerate () {
-  dispatch('regenerate');
-}
 </script>
 
 
@@ -26,13 +17,7 @@ async function regenerate () {
     <section class="settings" transition:slide={{ duration: 200 }}>
       <h2>Settings</h2>
       <hr>
-      <label for="rivers">
-        <p>Minimum river flux</p>
-        <input id="rivers" type="range" min="0" max="1000" step="1" bind:value={controlSettings.riverCap}>
-        <p>{controlSettings.riverCap}</p>
-      </label>
-
-      <button on:click={regenerate}>Regenerate!</button>
+      <slot/>
     </section>
   {/if}
 </div>
@@ -91,31 +76,6 @@ svg {
   color: currentColor;
 }
 
-h2 {
-  font-size: 18px;
-  font-weight: normal;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid currentColor;
-}
-
-label {
-  display: grid;
-  grid-template-columns: auto 1fr 3em;
-  grid-gap: 6px;
-}
-
-label p,
-label input {
-  display: block;
-}
-
-input {
-  width: 100%;
-}
-
 .expand:hover path {
   opacity: 1;
 }
@@ -128,7 +88,43 @@ path {
   transition: stroke 300ms;
 }
 
-.settings button {
+h2 {
+  font-size: 18px;
+  font-weight: normal;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid currentColor;
+}
+
+section :global(section) {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-gap: 4px 8px;
+
+}
+
+section :global(h3) {
+  font-weight: normal;
+  font-size: inherit;
+  font-size: .75em;
+  opacity: 0.75;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  grid-column: 1 / -1;
+}
+
+section :global(label) {
+  display: block;
+}
+
+section :global(input) {
+  width: 100%;
+}
+
+.settings :global(button) {
   font-size: inherit;
   border: none;
   padding: 7px;
@@ -138,8 +134,8 @@ path {
   cursor: pointer;
 }
 
-.settings button:hover {
-  background-color: hsla(0, 0%, 100%, 0.125);
+.settings :global(button:hover) {
+  background-color: hsla(0, 0%, 100%, 0.2);
 }
 
 </style>
