@@ -5,9 +5,10 @@ import Controls from './draw-webgl/Controls.svelte';
 import World from './draw-webgl/World.svelte';
 
 const rng = () => Math.floor(Math.random() * 1e8);
-const seaLevel = process.env.SEA_LEVEL || 0.39;
-const points = process.env.WORLD_POINTS || 2 ** 10;
-const seed = process.env.SEED || rng();
+const seaLevel = import.meta.env.SNOWPACK_PUBLIC_SEA_LEVEL || 0.39;
+const points = import.meta.env.SNOWPACK_PUBLIC_WORLD_POINTS || 2 ** 10;
+const seed = import.meta.env.SNOWPACK_PUBLIC_SEED || rng();
+
 
 let controlSettings = { riverCap: 80 };
 
@@ -22,7 +23,6 @@ async function gen (seed) {
 
 gen(seed);
 </script>
-
 
 <Canvas let:canvas >
   <div class="overlay" class:stale/>
