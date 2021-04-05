@@ -6,13 +6,14 @@ import RenderControls from './components/RenderControls.svelte';
 import GenerationControls from './components/GenerationControls.svelte';
 
 import World from './components/webgl/World.svelte';
+import SvgRenderer from './components/svg/Renderer.svelte';
 
 const rng = () => Math.floor(Math.random() * 1e8);
 const seaLevel = process.env.SEA_LEVEL || 0.39;
 const points = process.env.WORLD_POINTS || 2 ** 10;
 const seed = process.env.SEED || rng();
 
-let renderer = 'webgl';
+let renderer = 'svg';
 
 let generationOptions = {
   seaLevel,
@@ -25,7 +26,7 @@ let renderOptions = {
     riverCap: 80,
   },
   svg: {
-
+    
   }
 };
 
@@ -43,15 +44,19 @@ gen();
 
 
 {#if world}
-  <Canvas let:canvas >
-    <World {canvas} {...world} renderOptions={renderOptions.webgl} />
-  </Canvas>
+  {#if renderer === 'webgl'}
+    <Canvas let:canvas >
+      <World {canvas} {...world} renderOptions={renderOptions.webgl} />
+    </Canvas>
+  {:else if renderer === 'svg'}
+    <SvgRenderer {world} renderOptions={renderOptions.svg} />
+  {/if}
 {/if}
 
 <div class="overlay" class:stale />
 
 <Controls>
-  <RenderControls {renderer} bind:renderOptions />
+  <RenderControls bind:renderer bind:renderOptions />
   <GenerationControls
     bind:generationOptions
     on:reseed={() => generationOptions.seed = rng()}

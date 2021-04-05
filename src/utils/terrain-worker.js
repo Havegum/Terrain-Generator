@@ -17,7 +17,6 @@ class TerrainGenerator {
 
     let radius = Math.pow(500 / points, 0.5) / 10;
     const world = this.terrainGen.world(radius, seaLevel).as_js_value();
-
     world.seaLevel = seaLevel;
     world.points           = world.voronoi.delaunay.points;
     world.circumcenters    = world.voronoi.circumcenters;

@@ -11,8 +11,6 @@ macro_rules! log {
 }
 
 pub fn disc_sample(radius: f64, sea_level: f64, gen: &mut TerrainGenerator) -> Vec<f64> {
-    // Stuff
-
     let size = radius / (2.0_f64).sqrt();
     let cols = (1.0 / size) as usize;
     let rows = (1.0 / size) as usize;
@@ -77,18 +75,14 @@ fn sample_poisson_points(
         let y = point[1] + theta.sin() * offset;
 
         // If out of lower bounds, keep looking.
-        if 0.0 > x || 0.0 > y {
+        if x < -min_offset || y < -min_offset
+        || x > 1. + min_offset || y > 1. + min_offset {
             continue;
         }
 
         let sample = [x, y];
-        let col = (x / size) as usize;
-        let row = (y / size) as usize;
-
-        // If out of upper bounds, keep looking.
-        if row >= rows || col >= cols {
-            continue;
-        }
+        let col = ((x / size) as usize).min(cols - 1);
+        let row = ((y / size) as usize).min(rows - 1);
 
         if check_sample(row, col, cols, rows, &sample, &grid, min_offset) == false {
             continue; // Check if too close to existing samples. If point is not valid, keep looking.

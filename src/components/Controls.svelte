@@ -102,7 +102,7 @@ section :global(section) {
   margin-top: 8px;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  grid-gap: 4px 8px;
+  grid-gap: 14px 8px;
 
 }
 
@@ -112,7 +112,8 @@ section :global(h3) {
   font-size: .75em;
   opacity: 0.75;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-top: 4px;
+  margin-bottom: -4px;
   grid-column: 1 / -1;
 }
 

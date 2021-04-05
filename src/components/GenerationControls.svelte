@@ -20,13 +20,8 @@ async function reseedAndRegenerate () {
 
 let reseedHover = false;
 function trackHoverState (node) {
-    function hovering () {
-        reseedHover = true;
-    }
-
-    function notHovering () {
-        reseedHover = false;
-    }
+    function hovering () { reseedHover = true }
+    function notHovering () { reseedHover = false }
 
     node.addEventListener('pointerover', hovering)
     node.addEventListener('focus', hovering)
@@ -51,8 +46,8 @@ function trackHoverState (node) {
 
 
     <label for="seed">Seed</label>
-    <input id="seed" type="number" bind:value={generationOptions.seed}>
-    <label for="seed">{generationOptions.seed}</label>
+    <input class="span" id="seed" type="number" bind:value={generationOptions.seed}>
+    <!-- <label for="seed">{generationOptions.seed}</label> -->
 
     <label for="points">Points</label>
     <input id="points" type="range" min="250" max="7000" step="50" bind:value={generationOptions.points}>
@@ -104,5 +99,28 @@ button:active {
 
 .reseed-hover button:first-child {
     border-left: 1px solid white;
+}
+
+.span {
+    grid-column-end: span 2;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #888;
+    padding: 2px 0;
+    color: inherit;
+    font-size: inherit;
+    -moz-appearance: textfield;
+    outline: none;
+}
+
+.span:focus,
+.span:active {
+    border-color: white;
+}
+
+.span::-webkit-outer-spin-button,
+.span::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 </style>
