@@ -26,7 +26,11 @@ let renderOptions = {
     riverCap: 80,
   },
   svg: {
-    
+    hillColor: '#e8ffcd',
+    cliffColor: '#2f2b29',
+    landColor: '#338a3e',
+    waterColor: '#11acc6',
+    depthColor: '#041a2d',
   }
 };
 
