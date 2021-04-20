@@ -8,6 +8,10 @@ import GenerationControls from './components/GenerationControls.svelte';
 import World from './components/webgl/World.svelte';
 import SvgRenderer from './components/svg/Renderer.svelte';
 
+import HISTORY_WASM from '@/wasm/history_generator/Cargo.toml';
+const historyGenerator = HISTORY_WASM();
+
+
 const rng = () => Math.floor(Math.random() * 1e8);
 const seaLevel = process.env.SEA_LEVEL || 0.39;
 const points = process.env.WORLD_POINTS || 2 ** 10;
@@ -40,6 +44,14 @@ async function gen () {
   // seed = 15043459; // DEBUG THIS ONE
   console.log('seed:', generationOptions.seed);
   world = await generate(generationOptions);
+
+  console.log(world.neighbors);
+
+  const adjacencies = world.neighbors;
+  historyGenerator
+    .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4, 10))
+    .then(s => console.log(s.as_js_value()));
+
   stale = false;
 }
 

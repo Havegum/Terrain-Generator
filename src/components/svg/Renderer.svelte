@@ -3,12 +3,8 @@ import { deviation } from 'd3-array';
 export let world;
 export let renderOptions;
 
-console.log(world);
+// console.log(world);
 $: sqrtPointCount = Math.sqrt(world.points.length);
-// $: hillColor =  renderOptions.hillColor; //'#d3feb0';
-// $: landColor =  renderOptions.landColor; //'#40a74c';
-// $: waterColor = renderOptions.waterColor; //'#0cc4d6';
-// $: depthColor = renderOptions.depthColor; //'#005e8b';
 
 function indices (world) {
     return (new Array(world.points.length / 2)).fill();

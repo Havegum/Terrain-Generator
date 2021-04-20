@@ -23,6 +23,7 @@ class TerrainGenerator {
     world.voronoiAdjacency = world.voronoi.adjacent;
     world.voronoiTriangles = world.voronoi.voronoi_triangles;
     world.voronoiPoints    = world.voronoi.voronoi_points;
+    world.neighbors = world.voronoi.delaunay.neighbors;
 
     delete world.voronoi
     return world;

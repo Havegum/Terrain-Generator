@@ -1,15 +1,10 @@
-mod board;
-mod civ;
-mod utils;
-mod mcts;
-
-use wasm_bindgen::prelude::*;
-
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
+
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -20,3 +15,7 @@ extern "C" {
 pub fn greet() {
     alert("Hello, history-generator!");
 }
+
+mod board;
+mod civ;
+pub mod simulation;

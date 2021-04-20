@@ -58,7 +58,7 @@ const plugins = [
 	}),
 
 	commonjs(),
-	rust({ verbose: !production }),
+	rust({ verbose: true }),
 	string({ include: ['**/*.glsl'] })
 ];
 
