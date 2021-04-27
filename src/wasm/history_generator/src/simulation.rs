@@ -6,6 +6,7 @@ use super::board::Board;
 use super::civ::Civilization;
 
 use web_sys::console;
+
 #[allow(unused_macros)]
 macro_rules! log {
     ( $( $t:tt )* ) => {
@@ -55,6 +56,10 @@ pub struct Simulation {
 impl Simulation {
   pub fn new(adjacencies: Vec<Vec<usize>>, simulation_options: SimulationOptions) -> Simulation {
     let mut civs: Vec<Civilization> = Vec::with_capacity(simulation_options.initial_civs as usize);
+    for i in (0..simulation_options.initial_civs) {
+      civs.push(Civilization::new_distinct(&civs));
+    }
+
     let mut truth = Board::new(&adjacencies);
     let mut simulation = Board::new(&adjacencies);
 

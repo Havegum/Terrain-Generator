@@ -40,7 +40,6 @@ export let renderOptions;
     grid-template-columns: 1fr 1fr;
 }
 
-
 .render-selector label {
     border: 1px solid transparent;
     cursor: pointer;
