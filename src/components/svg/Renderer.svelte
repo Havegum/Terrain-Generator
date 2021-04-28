@@ -6,8 +6,8 @@ export let renderOptions;
 // console.log(world);
 $: sqrtPointCount = Math.sqrt(world.points.length);
 
-function indices (world) {
-    return (new Array(world.points.length / 2)).fill();
+function enumerate (n) {
+    return (new Array(n)).fill();
 }
 
 function renderCellPath (i) {
@@ -60,16 +60,32 @@ function renderCoast(world) {
     let path = coastLines.map(([a, b]) => point(a) + 'L' + point(b)).join('M    ')
     return `M ${path} Z`; 
 }
+
+$: indices = enumerate(world.points.length / 2);
 </script>
 
 
 <svg viewBox="-0.1 -0.1 1.2 1.2">
     <g class="cells">
-        {#each indices(world) as _, i (i)}
+        {#each indices as _, i (i)}
             <path
                 vector-effect="non-scaling-stroke"
                 d={renderCellPath(i)} fill={colorCell(i, renderOptions)}/>
+        {/each}
+    </g>
 
+    {#if world.history}
+        <g class="territory">
+            {#each world.history.civs as civ}
+                {#each civ.territory as i}
+                    <path d={renderCellPath(i)} style="--c: {civ.color}" vector-effect="non-scaling-stroke" />
+                {/each}
+            {/each}
+        </g>
+    {/if}
+        
+    <g class="cell-centroids">
+        {#each indices as _, i (i)}
             <line
                 vector-effect="non-scaling-stroke"
                 x1={world.points[i * 2]}
@@ -84,13 +100,11 @@ function renderCoast(world) {
         vector-effect="non-scaling-stroke"
         d={renderCoast(world)}/>
 
-
     <rect
         class="bounding-box"
         vector-effect="non-scaling-stroke"
         width="1"
         height="1"/>
-
 </svg>
 
 
@@ -114,7 +128,7 @@ svg {
     stroke-width: 0.125px;
 }
 
-.cells line {
+.cell-centroids line {
     shape-rendering: optimizeSpeed;
     stroke-width: 2px;
     stroke-linecap: square;
@@ -126,5 +140,13 @@ svg {
     fill: none;
     stroke: #133b66;
     stroke-width: 3px;
+    stroke-linecap: round;
+}
+
+.territory path {
+    fill: var(--c);
+    stroke: var(--c);
+    stroke-width: 2px;
+    fill-opacity: .5;
 }
 </style>

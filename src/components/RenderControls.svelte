@@ -24,11 +24,11 @@ export let renderOptions;
         <input id="rivers" type="range" min="0" max="1000" step="1" bind:value={renderOptions.webgl.riverCap}>
         <label for="rivers">{renderOptions.webgl.riverCap}</label>
     {:else if renderer === 'svg'}
-        {#each ['cliffColor', 'hillColor', 'landColor', 'waterColor', 'depthColor'] as c}
+        <!-- {#each ['cliffColor', 'hillColor', 'landColor', 'waterColor', 'depthColor'] as c}
             <label for={c}>{c}</label>
             <input id={c} type="text" bind:value={renderOptions.svg[c]}>
             <label for={c}>{renderOptions.svg[c]}</label>
-        {/each}
+        {/each} -->
     {/if}
 </section>
 

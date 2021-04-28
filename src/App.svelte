@@ -45,12 +45,14 @@ async function gen () {
   console.log('seed:', generationOptions.seed);
   world = await generate(generationOptions);
 
-  console.log(world.neighbors);
-
   const adjacencies = world.neighbors;
-  historyGenerator
-    .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4, 10))
-    .then(s => console.log(s.as_js_value()));
+  const history = await historyGenerator
+    .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4))
+    .then(sim => sim.simulate(10))
+    .then(sim => sim.as_js_value());
+  
+  world.history = history;
+  console.log(world.history);
 
   stale = false;
 }

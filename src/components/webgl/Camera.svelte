@@ -27,7 +27,7 @@ $: {
   $camera.y = $focus.y;
 };
 
-let zoom = spring(1.7, {
+let zoom = spring(2.115, {
   stiffness: 0.19,
   damping: 1,
   precision: 0.001,

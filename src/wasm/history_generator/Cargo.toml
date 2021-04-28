@@ -1,6 +1,9 @@
 [package]
 name = "history-generator"
 version = "0.1.0"
+description = "History generator for a terrain-generator using MCTS"
+license = "MIT"
+repository = "https://github.com/Havegum/Terrain-Generator"
 authors = ["Halvard Vegum <30663324+Havegum@users.noreply.github.com>"]
 edition = "2018"
 
@@ -16,7 +19,6 @@ default = ["console_error_panic_hook"]
 serde = { version = "^1.0.59", features = ["derive"] }
 serde_derive = "^1.0.59"
 wasm-bindgen = { version = "0.2.63", features = ["serde-serialize"] }
-
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
