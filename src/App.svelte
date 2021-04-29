@@ -48,7 +48,7 @@ async function gen () {
   const adjacencies = world.neighbors;
   const history = await historyGenerator
     .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4))
-    .then(sim => sim.simulate(10))
+    .then(sim => sim.simulate(50))
     .then(sim => sim.as_js_value());
   
   world.history = history;

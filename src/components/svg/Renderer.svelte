@@ -74,7 +74,7 @@ $: indices = enumerate(world.points.length / 2);
         {/each}
     </g>
 
-    {#if world.history}
+    {#if renderOptions.showTerritory && world.history}
         <g class="territory">
             {#each world.history.civs as civ}
                 {#each civ.territory as i}

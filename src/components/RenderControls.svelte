@@ -8,12 +8,12 @@ export let renderOptions;
     <h3>Render options</h3>
     
     <div class="render-selector">
-        <label class:selected={renderer==='webgl'}>
+        <label class:selected={renderer ===' webgl'}>
             <p>Webgl</p>
             <input type="radio" bind:group={renderer} value="webgl"/>
         </label>
         
-        <label class:selected={renderer==='svg'}>
+        <label class:selected={renderer === 'svg'}>
             <p>Svg</p>
             <input type="radio" bind:group={renderer} value="svg"/>
         </label>
@@ -24,11 +24,9 @@ export let renderOptions;
         <input id="rivers" type="range" min="0" max="1000" step="1" bind:value={renderOptions.webgl.riverCap}>
         <label for="rivers">{renderOptions.webgl.riverCap}</label>
     {:else if renderer === 'svg'}
-        <!-- {#each ['cliffColor', 'hillColor', 'landColor', 'waterColor', 'depthColor'] as c}
-            <label for={c}>{c}</label>
-            <input id={c} type="text" bind:value={renderOptions.svg[c]}>
-            <label for={c}>{renderOptions.svg[c]}</label>
-        {/each} -->
+        <label for="show-territory">Show territory</label>
+        <input id="show-territory" type="checkbox" bind:value={renderOptions.svg.showTerritory}>
+        <!-- <label for="show-territory">{renderOptions.svg.showTerritory}</label> -->
     {/if}
 </section>
 
