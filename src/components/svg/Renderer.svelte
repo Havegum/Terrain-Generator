@@ -3,6 +3,7 @@ import { deviation } from 'd3-array';
 export let world;
 export let renderOptions;
 
+$: console.log(renderOptions)
 // console.log(world);
 $: sqrtPointCount = Math.sqrt(world.points.length);
 
