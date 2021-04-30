@@ -94,9 +94,7 @@ impl Simulation {
       for mut civ in self.civs.iter_mut() {
         let action = civ.choose_action(&mut self.simulation);
         self.truth.apply(action, civ);
-
         log!("  | {}'s turn", civ.name);
-
       }
     }
     self
