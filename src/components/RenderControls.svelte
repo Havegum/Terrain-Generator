@@ -25,7 +25,7 @@ export let renderOptions;
         <label for="rivers">{renderOptions.webgl.riverCap}</label>
     {:else if renderer === 'svg'}
         <label for="show-territory">Show territory</label>
-        <input id="show-territory" type="checkbox" bind:value={renderOptions.svg.showTerritory}>
+        <input id="show-territory" type="checkbox" bind:checked={renderOptions.svg.showTerritory}>
         <!-- <label for="show-territory">{renderOptions.svg.showTerritory}</label> -->
     {/if}
 </section>

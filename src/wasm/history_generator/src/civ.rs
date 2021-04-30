@@ -43,17 +43,19 @@ pub struct Civilization {
     pub name: String,
     pub color: String,
     pub territory: HashSet<usize>,
+    pub neighbor_territory: HashSet<usize>,
     #[serde(skip_serializing)]
     pub rng: Pcg32,
 }
 
 impl Civilization {
-    pub fn new(id: usize, name: String, color: String, territory: HashSet<usize>) -> Civilization {
+    pub fn new(id: usize, name: String, color: String) -> Civilization {
         Civilization {
             id,
             name,
             color,
-            territory,
+            territory: HashSet::new(),
+            neighbor_territory: HashSet::new(),
             rng: Pcg32::seed_from_u64(id as u64),
         }
     }
@@ -63,9 +65,8 @@ impl Civilization {
         let id = get_id();
         let name = NAMES[id % NAMES.len()].to_string();
         let color = COLORS[id % COLORS.len()].to_string();
-        let territory = HashSet::new();
-        
-        Civilization::new(id, name, color, territory)
+
+        Civilization::new(id, name, color)
     }
 
     pub fn spawn(civs: &Vec<Civilization>, truth: &mut Board, simulation: &mut Board) -> Civilization {
@@ -102,6 +103,8 @@ impl Civilization {
         // suggested_action
         // unimplemented!();
     }
+
+    // pub fn add_territory(&mut s)
 
     pub fn score(&self) -> f64 {
         self.territory.len() as f64

@@ -35,6 +35,7 @@ let renderOptions = {
     landColor: '#338a3e',
     waterColor: '#11acc6',
     depthColor: '#041a2d',
+    showTerritory: true,
   }
 };
 
