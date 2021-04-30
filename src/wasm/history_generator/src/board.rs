@@ -1,5 +1,5 @@
 use serde::{Serialize};
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use rand_core::{RngCore};
 
@@ -44,23 +44,23 @@ impl Board {
     Board { cells, history: Vec::new() }
   }
 
-  pub fn apply (&mut self, action: ActionType, civ: &mut Civilization) -> Action {
+  pub fn apply (&mut self, action: ActionType, civ_id: usize, civs: &mut HashMap<usize, Civilization>) -> Action {
     let successful: bool;
     match action {
       ActionType::Occupy(i) => {
         match self.cells[i].owner_civ_id {
-          Some(i) => {
-            let successful = civ.rng.next_u32() > u32::MAX / 2;
+          Some(other) => {
+            let successful = civs.get_mut(&civ_id).unwrap().rng.next_u32() > u32::MAX / 2;
+
             if successful {
-              self.cells[i].owner_civ_id = Some(civ.id);
-              civ.territory.insert(i);
+              civs.get_mut(&civ_id).unwrap().add_territory(self, i);
+              civs.get_mut(&other).unwrap().remove_territory(self, i);
             }
-            return Action { action, civ_id: civ.id, successful };
+            return Action { action, civ_id, successful };
           }
           None => {
-            self.cells[i].owner_civ_id = Some(civ.id);
-            civ.territory.insert(i);
-            return Action { action, civ_id: civ.id, successful: true };
+            civs.get_mut(&civ_id).unwrap().add_territory(self, i);
+            return Action { action, civ_id, successful: true };
           }
         }
       }

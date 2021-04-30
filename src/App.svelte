@@ -10,7 +10,7 @@ import SvgRenderer from './components/svg/Renderer.svelte';
 
 import HISTORY_WASM from '@/wasm/history_generator/Cargo.toml';
 const historyGenerator = HISTORY_WASM();
-
+let history;
 
 const rng = () => Math.floor(Math.random() * 1e8);
 const seaLevel = process.env.SEA_LEVEL || 0.39;
@@ -47,15 +47,23 @@ async function gen () {
   world = await generate(generationOptions);
 
   const adjacencies = world.neighbors;
-  const history = await historyGenerator
+  history = await historyGenerator
     .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4))
-    .then(sim => sim.simulate(50))
-    .then(sim => sim.as_js_value());
+    .then(sim => sim.simulate(1));
+    
   
-  world.history = history;
+  world.history = history.as_js_value();
   console.log(world.history);
 
   stale = false;
+}
+
+async function incrementHistory () {
+  console.log(history);
+  if (history) {
+    history = history.simulate(1);
+    world.history = history.as_js_value();
+  }
 }
 
 gen();
@@ -80,6 +88,7 @@ gen();
     bind:generationOptions
     on:reseed={() => generationOptions.seed = rng()}
     on:regenerate={gen}
+    on:incrementHistory={incrementHistory}
   />
 </Controls>
 

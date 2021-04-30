@@ -1,5 +1,6 @@
 // use wasm_bindgen::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
+use std::iter::FromIterator;
 // use super::mcts::SimulatedWorld;
 
 #[allow(unused_imports)]
@@ -60,7 +61,7 @@ impl Civilization {
         }
     }
 
-    fn new_distinct(_civs: &Vec<Civilization>) -> Civilization {
+    fn new_distinct(_civs: &HashMap<usize, Civilization>) -> Civilization {
         // TODO: generate names and colors. Ensure unique.
         let id = get_id();
         let name = NAMES[id % NAMES.len()].to_string();
@@ -69,32 +70,36 @@ impl Civilization {
         Civilization::new(id, name, color)
     }
 
-    pub fn spawn(civs: &Vec<Civilization>, truth: &mut Board, simulation: &mut Board) -> Civilization {
+    pub fn spawn(
+        civs: &HashMap<usize, Civilization>,
+        truth: &mut Board,
+        simulation: &mut Board,
+        starting_location: Vec<usize>,
+    ) -> Civilization {
         let mut civ = Self::new_distinct(civs);
-        loop {
-            // TODO: better spawn location than random
-            let candidate = civ.rng.next_u32() as usize % truth.cells.len();
-            if truth.cells[candidate].owner_civ_id == None {
-                civ.territory.insert(candidate);
-                truth.cells[candidate].owner_civ_id = Some(civ.id);
-                simulation.cells[candidate].owner_civ_id = Some(civ.id);
-                return civ
-            }
+        for territory in starting_location {
+            civ.add_territory(truth, territory);
+            simulation.cells[territory].owner_civ_id = Some(civ.id);
         }
+        civ
+        // loop {
+        //     // TODO: better spawn location than random
+        //     let candidate = civ.rng.next_u32() as usize % truth.cells.len();
+        //     if truth.cells[candidate].owner_civ_id == None {
+        //         civ.territory.insert(candidate);
+        //         truth.cells[candidate].owner_civ_id = Some(civ.id);
+        //         simulation.cells[candidate].owner_civ_id = Some(civ.id);
+        //         return civ
+        //     }
+        // }
     }
 
     pub fn choose_action(&mut self, simulation: &mut Board) -> ActionType {
-        let mut candidates = HashSet::new();
+        let candidates = Vec::from_iter(self.neighbor_territory.clone());
 
-        for i in self.territory.iter() {
-            candidates.extend(&simulation.cells[*i].adjacent);
-        }
-
-        let candidates: Vec<usize> = candidates
-            .into_iter()
-            .filter(|i| !self.territory.contains(i))
-            .collect();
+        log!("{:?}", self.territory);
         let random = self.rng.next_u32() as usize % candidates.len();
+
         ActionType::Occupy(candidates[random])
         
         // Perceptions of others must be fresh here. Maybe just call it just before finding actions
@@ -104,7 +109,33 @@ impl Civilization {
         // unimplemented!();
     }
 
-    // pub fn add_territory(&mut s)
+    pub fn add_territory(&mut self, board: &mut Board, territory: usize) {
+        self.territory.insert(territory);
+        board.cells[territory].owner_civ_id = Some(self.id);
+        self.neighbor_territory.extend(
+            board.cells[territory].adjacent.difference(&self.territory).collect::<HashSet<&usize>>()
+        );
+        self.neighbor_territory.remove(&territory);
+    }
+
+    pub fn remove_territory(&mut self, board: &mut Board, territory: usize) {
+        self.territory.remove(&territory);
+        board.cells[territory].owner_civ_id = None;
+
+        let mut neighbors_neighbours = board.cells[territory].adjacent.clone();
+        // neighbors_neighbours.insert(territory);
+
+        for &n in neighbors_neighbours.iter() {
+            let neighbours_owned_cell = board.cells[n].adjacent
+                .iter()
+                .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));
+
+            if neighbours_owned_cell {
+                self.neighbor_territory.insert(n);
+            }
+        }
+    }
+
 
     pub fn score(&self) -> f64 {
         self.territory.len() as f64
