@@ -27,7 +27,7 @@ macro_rules! log {
 }
 
 const NAMES: [&str; 10] = ["tidux", "houga", "finar", "omho", "trokzoq", "filphond", "xuwgoll", "smaqjaul", "sirpheneo", "sprakloomu"];
-const COLORS: [&str; 10] = ["#fe5900", "#7d1a6e", "#fb4e93", "#406087", "#bf711e", "#7d49e2", "#79300f", "#9a95e5", "#dd858d", "#9f04fc"];
+const COLORS: [&str; 10] = ["#feb900", "#ad11ae", "#3bcea3", "#4060f7", "#bf711e", "#7d49e2", "#79300f", "#9a95e5", "#dd858d", "#9f04fc"];
 
 // From https://users.rust-lang.org/t/idiomatic-rust-way-to-generate-unique-id/33805
 fn get_id() -> usize {
@@ -82,16 +82,6 @@ impl Civilization {
             simulation.cells[territory].owner_civ_id = Some(civ.id);
         }
         civ
-        // loop {
-        //     // TODO: better spawn location than random
-        //     let candidate = civ.rng.next_u32() as usize % truth.cells.len();
-        //     if truth.cells[candidate].owner_civ_id == None {
-        //         civ.territory.insert(candidate);
-        //         truth.cells[candidate].owner_civ_id = Some(civ.id);
-        //         simulation.cells[candidate].owner_civ_id = Some(civ.id);
-        //         return civ
-        //     }
-        // }
     }
 
     pub fn choose_action(&mut self, simulation: &mut Board) -> ActionType {
@@ -123,9 +113,10 @@ impl Civilization {
         board.cells[territory].owner_civ_id = None;
 
         let mut neighbors_neighbours = board.cells[territory].adjacent.clone();
-        // neighbors_neighbours.insert(territory);
+        neighbors_neighbours.insert(territory);
 
         for &n in neighbors_neighbours.iter() {
+            if self.territory.contains(&n) { continue }
             let neighbours_owned_cell = board.cells[n].adjacent
                 .iter()
                 .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));

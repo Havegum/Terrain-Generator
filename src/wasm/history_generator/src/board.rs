@@ -53,8 +53,8 @@ impl Board {
             let successful = civs.get_mut(&civ_id).unwrap().rng.next_u32() > u32::MAX / 2;
 
             if successful {
-              civs.get_mut(&civ_id).unwrap().add_territory(self, i);
               civs.get_mut(&other).unwrap().remove_territory(self, i);
+              civs.get_mut(&civ_id).unwrap().add_territory(self, i);
             }
             return Action { action, civ_id, successful };
           }

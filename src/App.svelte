@@ -61,7 +61,7 @@ async function gen () {
 async function incrementHistory () {
   console.log(history);
   if (history) {
-    history = history.simulate(1);
+    history = history.simulate(10);
     world.history = history.as_js_value();
   }
 }

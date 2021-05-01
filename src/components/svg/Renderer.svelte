@@ -62,7 +62,7 @@ function renderCoast(world) {
 	return `M ${path} Z`; 
 }
 
-function circumcenter (t) {
+function point (t) {
 	const x = world.points[t * 2];
 	const y = 1 - world.points[t * 2 + 1];
 	const e = 5e-3;
@@ -70,8 +70,6 @@ function circumcenter (t) {
 }
 
 $: indices = enumerate(world.points.length / 2);
-
-$: if (world.history) console.log(world.history.move_order.map(id => world.history.civs[id].neighbor_territory))
 </script>
 
 
@@ -91,7 +89,7 @@ $: if (world.history) console.log(world.history.move_order.map(id => world.histo
 					{#each civ.territory as i}
 						<path d={renderCellPath(i)} vector-effect="non-scaling-stroke" />
 					{/each}
-					{#each civ.neighbor_territory.map(circumcenter) as { x, y, e }}
+					{#each civ.neighbor_territory.map(point) as { x, y, e }}
 						<circle
 							cx={x}
 							cy={y}
@@ -106,7 +104,7 @@ $: if (world.history) console.log(world.history.move_order.map(id => world.histo
 		</g>
 	{/if}
 			
-	<g class="cell-centroids">
+	<!-- <g class="cell-centroids">
 		{#each indices as _, i (i)}
 			<line
 				vector-effect="non-scaling-stroke"
@@ -115,7 +113,7 @@ $: if (world.history) console.log(world.history.move_order.map(id => world.histo
 				x2={world.points[i * 2]}
 				y2={-1e-7 + 1 - world.points[i * 2 + 1]}/>
 		{/each}
-	</g>
+	</g> -->
 
 	<path
 		class="coast"
