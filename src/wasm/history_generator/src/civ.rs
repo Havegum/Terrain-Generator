@@ -26,8 +26,8 @@ macro_rules! log {
     }
 }
 
-const NAMES: [&str; 10] = ["tidux", "houga", "finar", "omho", "trokzoq", "filphond", "xuwgoll", "smaqjaul", "sirpheneo", "sprakloomu"];
-const COLORS: [&str; 10] = ["#feb900", "#ad11ae", "#3bcea3", "#4060f7", "#bf711e", "#7d49e2", "#79300f", "#9a95e5", "#dd858d", "#9f04fc"];
+const NAMES: [&str; 4] = ["Yellow", "Purple", "Red", "Blue"]; // "trokzoq", "filphond", "xuwgoll", "smaqjaul", "sirpheneo", "sprakloomu"];
+const COLORS: [&str; 4] = ["#ffc107", "#9c27b0", "#f44336", "#005aa1"]; //, "#bf711e", "#7d49e2", "#79300f", "#9a95e5", "#dd858d", "#9f04fc"];
 
 // From https://users.rust-lang.org/t/idiomatic-rust-way-to-generate-unique-id/33805
 fn get_id() -> usize {
@@ -72,25 +72,23 @@ impl Civilization {
 
     pub fn spawn(
         civs: &HashMap<usize, Civilization>,
-        truth: &mut Board,
-        simulation: &mut Board,
+        board: &mut Board,
         starting_location: Vec<usize>,
     ) -> Civilization {
         let mut civ = Self::new_distinct(civs);
         for territory in starting_location {
-            civ.add_territory(truth, territory);
-            simulation.cells[territory].owner_civ_id = Some(civ.id);
+            civ.add_territory(board, territory);
         }
         civ
     }
 
-    pub fn choose_action(&mut self, simulation: &mut Board) -> ActionType {
+    pub fn choose_action(&mut self, board: &mut Board) -> ActionType {
+        // If occupy:
         let candidates = Vec::from_iter(self.neighbor_territory.clone());
-
-        log!("{:?}", self.territory);
-        let random = self.rng.next_u32() as usize % candidates.len();
-
-        ActionType::Occupy(candidates[random])
+        let territory = self.rng.next_u32() as usize % candidates.len();
+        let territory = candidates[territory];
+        let defender = board.cells[territory].owner_civ_id;
+        ActionType::Occupy(territory, defender)
         
         // Perceptions of others must be fresh here. Maybe just call it just before finding actions
         // self.perceive_priorities(&mut simulation.civilizations);
@@ -117,6 +115,8 @@ impl Civilization {
 
         for &n in neighbors_neighbours.iter() {
             if self.territory.contains(&n) { continue }
+            self.neighbor_territory.remove(&n);
+
             let neighbours_owned_cell = board.cells[n].adjacent
                 .iter()
                 .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));

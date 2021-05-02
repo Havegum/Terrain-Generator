@@ -13,8 +13,11 @@ async function reseed () {
 }
 
 async function incrementHistory () {
-    console.log('incrementHistory');
     dispatch('incrementHistory');
+}
+
+async function revertHistory () {
+    dispatch('revertHistory');
 }
 
 async function reseedAndRegenerate () {
@@ -62,9 +65,12 @@ function trackHoverState (node) {
     <input id="sea-level" type="range" min="0" max="1" step="0.01" bind:value={generationOptions.seaLevel}>
     <label for="sea-level">{generationOptions.seaLevel}</label>
 
-    <h4>History generation</h4>
     <div>
-        <button on:click={incrementHistory}>Step</button>
+        <h4>History generation</h4>
+        <div>
+            <button on:click={revertHistory}>Step back</button>
+            <button on:click={incrementHistory}>Step forward</button>
+        </div>
     </div>
 </section>
 

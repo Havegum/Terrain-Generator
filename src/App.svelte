@@ -59,9 +59,15 @@ async function gen () {
 }
 
 async function incrementHistory () {
-  console.log(history);
   if (history) {
-    history = history.simulate(10);
+    history = history.simulate(1);
+    world.history = history.as_js_value();
+  }
+}
+
+async function revertHistory () {
+  if (history) {
+    history = history.revert(1);
     world.history = history.as_js_value();
   }
 }
@@ -89,6 +95,7 @@ gen();
     on:reseed={() => generationOptions.seed = rng()}
     on:regenerate={gen}
     on:incrementHistory={incrementHistory}
+    on:revertHistory={revertHistory}
   />
 </Controls>
 
