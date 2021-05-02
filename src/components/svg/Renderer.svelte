@@ -148,13 +148,13 @@ svg {
     stroke-width: 0.125px;
 }
 
-.cell-centroids line {
+/* .cell-centroids line {
     shape-rendering: optimizeSpeed;
     stroke-width: 2px;
     stroke-linecap: square;
     fill: none;
     stroke: black;
-}
+} */
 
 .coast {
     fill: none;
@@ -175,5 +175,4 @@ svg {
 	stroke: var(--c);
 	stroke-width: 1.5px;
 }
-
 </style>

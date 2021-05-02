@@ -6,7 +6,7 @@ use rand_core::{RngCore};
 use super::civ::Civilization;
 
 pub enum ActionType {
-  Occupy(usize),
+  Occupy(usize, Option<usize>),
   // Defend,
 }
 
@@ -45,25 +45,31 @@ impl Board {
   }
 
   pub fn apply (&mut self, action: ActionType, civ_id: usize, civs: &mut HashMap<usize, Civilization>) -> Action {
-    let successful: bool;
     match action {
-      ActionType::Occupy(i) => {
-        match self.cells[i].owner_civ_id {
-          Some(other) => {
-            let successful = civs.get_mut(&civ_id).unwrap().rng.next_u32() > u32::MAX / 2;
+      ActionType::Occupy(territory, defender) => self.apply_occupy(self, territory, civ_id, defender, civs),
+      //  {
+      //   match self.cells[i].owner_civ_id {
+      //     Some(other) => {
+      //       let successful = civs.get_mut(&civ_id).unwrap().rng.next_u32() > u32::MAX / 2;
 
-            if successful {
-              civs.get_mut(&other).unwrap().remove_territory(self, i);
-              civs.get_mut(&civ_id).unwrap().add_territory(self, i);
-            }
-            return Action { action, civ_id, successful };
-          }
-          None => {
-            civs.get_mut(&civ_id).unwrap().add_territory(self, i);
-            return Action { action, civ_id, successful: true };
-          }
-        }
+      //       if successful {
+      //         civs.get_mut(&other).unwrap().remove_territory(self, i);
+      //         civs.get_mut(&civ_id).unwrap().add_territory(self, i);
+      //       }
+      //       return Action { action, civ_id, successful };
+      //     }
+      None => {
+        civs.get_mut(&civ_id).unwrap().add_territory(self, i);
+        Action { action, civ_id, successful: true }
       }
-    };
+    }
   }
+
+  pub fn apply_occupy (&mut self, territory: usize, aggressor: usize, defender: Option<usize> civs: &mut HashMap<usize, Civilization>) -> Action {
+
+  }
+
+  // pub fn undo_occupy (&mut self, action: action) {
+
+  // }
 }
