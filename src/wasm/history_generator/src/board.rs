@@ -4,10 +4,11 @@ use std::iter::FromIterator;
 use rand_core::{RngCore};
 
 use super::civ::Civilization;
+use super::simulation::{World};
 
 use web_sys::console;
-use wasm_bindgen::{JsValue};
 
+use wasm_bindgen::{JsValue};
 #[allow(unused_macros)]
 macro_rules! log {
     ( $( $t:tt )* ) => {
@@ -44,17 +45,20 @@ pub struct Cell {
   index: usize,
   pub owner_civ_id: Option<usize>,
   pub adjacent: HashSet<usize>,
+  pub height: f64,
 }
 
 impl Board {
-  pub fn new(adjacencies: &Vec<Vec<usize>>) -> Board {
-    let cells = adjacencies
+  pub fn new(world: World) -> Board {
+    let cells = world.adjacencies
       .iter()
+      .zip(world.heights.iter())
       .enumerate()
-      .map(|(index, adjacent)| Cell {
+      .map(|(index, (adjacent, &height))| Cell {
         index,
         owner_civ_id: None,
         adjacent: HashSet::from_iter(adjacent.clone()),
+        height,
       }).collect();
 
     Board { cells, history: Vec::new() }

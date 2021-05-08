@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsValue};
-use serde::{Serialize};
+use serde::{Serialize, Deserialize};
 use rand_core::{RngCore, SeedableRng};
 use rand_pcg::Pcg32;
 use std::collections::HashMap;
@@ -21,9 +21,15 @@ macro_rules! log {
     }
 }
 
-#[wasm_bindgen]
-#[derive(Serialize)]
-pub struct SimulationOptions {
+#[derive(Deserialize)]
+pub struct World {
+  pub adjacencies: Vec<Vec<usize>>,
+  pub heights: Vec<f64>,
+  #[serde(rename = "seaLevel")] 
+  pub sea_level: f64,
+}
+
+struct SimulationOptions {
   seed: u32,
   initial_civs: u32,
   turns: u32,
@@ -36,7 +42,6 @@ pub struct Simulation {
   move_order: Vec<usize>, 
   board: Board,
   turn: usize,
-  simulation_options: SimulationOptions,
   #[serde(skip_serializing)]
   rng: Pcg32,
 }
@@ -59,11 +64,10 @@ pub struct Simulation {
 
 
 impl Simulation {
-  
-  pub fn new(adjacencies: Vec<Vec<usize>>, simulation_options: SimulationOptions) -> Simulation {
+  fn new(world: World, simulation_options: SimulationOptions) -> Simulation {
     let mut rng = Pcg32::seed_from_u64(simulation_options.seed as u64);
 
-    let mut board = Board::new(&adjacencies);
+    let mut board = Board::new(world);
 
     let mut move_order = Vec::with_capacity(simulation_options.initial_civs as usize);
     let mut civs = HashMap::with_capacity(simulation_options.initial_civs as usize);
@@ -87,7 +91,6 @@ impl Simulation {
       civs,
       move_order,
       board,
-      simulation_options,
       rng,
     }
   }
@@ -97,12 +100,13 @@ impl Simulation {
 #[wasm_bindgen]
 impl Simulation {
   #[wasm_bindgen(constructor)]
-  pub fn js_new(adjacencies: &JsValue, seed: u32, initial_civs: u32) -> Simulation {
+  pub fn constructor(world: &JsValue, seed: u32, initial_civs: u32) -> Simulation {
     log!("Constructor called from JS!");
-    let adjacencies: Vec<Vec<usize>> = adjacencies.into_serde().unwrap();
+    let world: World = world.into_serde().unwrap();
+
     let simulation_options = SimulationOptions { seed, initial_civs, turns: 0 };
 
-    Simulation::new(adjacencies, simulation_options)
+    Simulation::new(world, simulation_options)
   }
 
   pub fn simulate(mut self, turns: u32) -> Simulation {

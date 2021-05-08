@@ -17,7 +17,9 @@ const seaLevel = process.env.SEA_LEVEL || 0.39;
 const points = process.env.WORLD_POINTS || 2 ** 10;
 const seed = process.env.SEED || rng();
 
+const renderers = ['svg', 'webgl'];
 let renderer = 'svg';
+
 
 let generationOptions = {
   seaLevel,
@@ -47,13 +49,19 @@ async function gen () {
   world = await generate(generationOptions);
 
   const adjacencies = world.neighbors;
+
+  const worldArg = {
+    adjacencies,
+    heights: world.cellHeights,
+    seaLevel: world.seaLevel
+  };
+
   history = await historyGenerator
-    .then(({ Simulation }) => new Simulation(adjacencies, 1234, 4))
+    .then(({ Simulation }) => new Simulation(worldArg, 1234, 4))
     .then(sim => sim.simulate(1));
     
   
   world.history = history.as_js_value();
-  console.log(world.history);
 
   stale = false;
 }
@@ -73,8 +81,21 @@ async function revertHistory () {
 }
 
 gen();
+
+
+function keyboardShortcuts (e) {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const i = renderers.indexOf(renderer);
+    renderer = renderers[(i + 1) % renderers.length];
+  }
+}
 </script>
 
+
+<svelte:window
+  on:keydown={keyboardShortcuts}
+/>
 
 {#if world}
   {#if renderer === 'webgl'}
