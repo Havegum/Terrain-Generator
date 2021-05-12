@@ -21,15 +21,15 @@ macro_rules! log {
 }
 
 #[derive(Debug)]
-pub enum ActionType {
+pub enum Action {
   Occupy(usize, Option<usize>),
   // Defend,
 }
 
 #[derive(Debug)]
-pub struct Action {
+pub struct Move {
   civ_id: usize,
-  action: ActionType,
+  action: Action,
   successful: bool,
 }
 
@@ -37,7 +37,7 @@ pub struct Action {
 pub struct Board {
   pub cells: Vec<Cell>,
   #[serde(skip_serializing)]
-  pub history: Vec<Vec<Action>>,
+  pub history: Vec<Vec<Move>>,
 }
 
 #[derive(Serialize)]
@@ -64,20 +64,20 @@ impl Board {
     Board { cells, history: Vec::new() }
   }
 
-  pub fn apply(&mut self, action: ActionType, civ_id: usize, civs: &mut HashMap<usize, Civilization>) {
+  pub fn apply(&mut self, action: Action, civ_id: usize, civs: &mut HashMap<usize, Civilization>) {
     let action = match action {
-      ActionType::Occupy(territory, defender) =>
+      Action::Occupy(territory, defender) =>
         self.apply_occupy(territory, civ_id, defender, civs),
     };
 
     self.history.last_mut().unwrap().push(action);
   }
   
-  pub fn undo(&mut self, action: &Action, civs: &mut HashMap<usize, Civilization>) {
-    if action.successful {
-      match action.action {
-        ActionType::Occupy(territory, defender) =>
-          self.undo_occupy(territory, action.civ_id, defender, civs),
+  pub fn undo(&mut self, r#move: &Move, civs: &mut HashMap<usize, Civilization>) {
+    if r#move.successful {
+      match r#move.action {
+        Action::Occupy(territory, defender) =>
+          self.undo_occupy(territory, r#move.civ_id, defender, civs),
       };
     }
   }
@@ -85,7 +85,7 @@ impl Board {
 
 // Occupy
 impl Board {
-  pub fn apply_occupy(&mut self, territory: usize, aggressor: usize, defender: Option<usize>, civs: &mut HashMap<usize, Civilization>) -> Action {
+  pub fn apply_occupy(&mut self, territory: usize, aggressor: usize, defender: Option<usize>, civs: &mut HashMap<usize, Civilization>) -> Move {
     match defender {
       
       Some(defender) => {
@@ -95,13 +95,13 @@ impl Board {
           civs.get_mut(&defender).unwrap().remove_territory(self, territory);
           civs.get_mut(&aggressor).unwrap().add_territory(self, territory);
         }
-        let action = ActionType::Occupy(territory, Some(defender));
-        Action { action, civ_id: aggressor, successful }
+        let action = Action::Occupy(territory, Some(defender));
+        Move { action, civ_id: aggressor, successful }
       },
       None => {
         civs.get_mut(&aggressor).unwrap().add_territory(self, territory);
-        let action = ActionType::Occupy(territory, None);
-        Action { action, civ_id: aggressor, successful: true }
+        let action = Action::Occupy(territory, None);
+        Move { action, civ_id: aggressor, successful: true }
       }
     }
   }

@@ -1,14 +1,14 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsValue};
 use serde::{Serialize, Deserialize};
+use web_sys::console;
+
 use rand_core::{RngCore, SeedableRng};
 use rand_pcg::Pcg32;
 use std::collections::HashMap;
 
-use super::board::{Board, Action};
+use super::board::{Board, Move};
 use super::civ::Civilization;
-
-use web_sys::console;
 
 #[allow(unused_macros)]
 macro_rules! log {
@@ -45,22 +45,6 @@ pub struct Simulation {
   #[serde(skip_serializing)]
   rng: Pcg32,
 }
-
-
-// js:
-// world = new SimulatedWorld({ seed: 1234, initialCivs?: 4 });
-// world = world.simulate({ turns: 1000 })
-
-// rust:
-// create initial civs
-// create new world
-// create new simulation
-// 
-// for each turn:
-  // for each civ:
-    // mcts(&simulation, &civs, n: u32, k: u32) simulate `n` actions `k` times
-    // select and attempt 1 action
-    // reset simulation
 
 
 impl Simulation {
@@ -112,7 +96,9 @@ impl Simulation {
   pub fn simulate(mut self, turns: u32) -> Simulation {
     for _ in 0..turns {
       log!("__________\nPLAYING TURN {}", self.turn);
+
       self.board.history.push(Vec::new());
+      
       for &id in self.move_order.iter() {
         let action = if let Some(civ) = self.civs.get_mut(&id) {
           log!("| {}'s turn", civ.name);
@@ -132,7 +118,7 @@ impl Simulation {
     log!("Reverting {} turns", turns);
     let i = self.board.history.len().saturating_sub(turns as usize);
 
-    let turns: Vec<Vec<Action>> = self.board.history
+    let turns: Vec<Vec<Move>> = self.board.history
       .drain(i..)
       .collect();
     

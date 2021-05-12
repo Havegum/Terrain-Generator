@@ -13,7 +13,7 @@ use rand_pcg::Pcg32;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use serde::{Serialize};
 
-use super::board::{Board, ActionType};
+use super::board::{Board, Action};
 
 #[allow(unused_macros)]
 macro_rules! log {
@@ -82,17 +82,20 @@ impl Civilization {
         civ
     }
 
-    pub fn choose_action(&mut self, board: &mut Board) -> ActionType {
+    pub fn choose_action(&mut self, board: &mut Board) -> Action {
+        // let actions: HashMap<Action> = HashMap::new();
+        
+
         // If occupy:
         let candidates = Vec::from_iter(self.neighbor_territory.clone());
         let territory = self.rng.next_u32() as usize % candidates.len();
         let territory = candidates[territory];
         let defender = board.cells[territory].owner_civ_id;
-        ActionType::Occupy(territory, defender)
+        Action::Occupy(territory, defender)
         
         // Perceptions of others must be fresh here. Maybe just call it just before finding actions
         // self.perceive_priorities(&mut simulation.civilizations);
-        // let suggested_action: ActionType = simulation.find(self.id, &self.priorities, &self.perceptions);
+        // let suggested_action: Action = simulation.find(self.id, &self.priorities, &self.perceptions);
         // suggested_action
         // unimplemented!();
     }
