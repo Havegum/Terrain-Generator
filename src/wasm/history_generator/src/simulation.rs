@@ -38,8 +38,8 @@ struct SimulationOptions {
 #[wasm_bindgen(readonly)]
 #[derive(Serialize)]
 pub struct Simulation {
-  civs: HashMap<usize, Civilization>,
-  move_order: Vec<usize>, 
+  // civs: HashMap<usize, Civilization>,
+  // move_order: Vec<usize>, 
   board: Board,
   turn: usize,
   #[serde(skip_serializing)]
