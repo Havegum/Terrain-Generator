@@ -38,6 +38,8 @@ pub struct Board {
   pub cells: Vec<Cell>,
   #[serde(skip_serializing)]
   pub history: Vec<Vec<Move>>,
+  pub civs: HashMap<usize, Civilization>,
+  pub turn_order: Vec<usize>,
 }
 
 #[derive(Serialize)]
@@ -49,7 +51,7 @@ pub struct Cell {
 }
 
 impl Board {
-  pub fn new(world: World) -> Board {
+  pub fn new(world: World, civs: HashMap<usize, Civilization>, turn_order: Vec<usize>) -> Board {
     let cells = world.adjacencies
       .iter()
       .zip(world.heights.iter())
@@ -61,7 +63,7 @@ impl Board {
         height,
       }).collect();
 
-    Board { cells, history: Vec::new() }
+    Board { cells, history: Vec::new(), civs, turn_order }
   }
 
   pub fn apply(&mut self, action: Action, civ_id: usize, civs: &mut HashMap<usize, Civilization>) {

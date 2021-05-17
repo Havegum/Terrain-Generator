@@ -100,14 +100,20 @@ impl Simulation {
       self.board.history.push(Vec::new());
       
       for &id in self.move_order.iter() {
-        let action = if let Some(civ) = self.civs.get_mut(&id) {
-          log!("| {}'s turn", civ.name);
-          Some(civ.choose_action(&mut self.board))
-        } else { None };
+        let mut civ;
+        {
+          civ = self.civs.get_mut(&id).unwrap();
+        } 
+        // let action = if let Some(civ) = self.civs.get_mut(&id) {
+        //   log!("| {}'s turn", civ.name);
+        //   Some(civ.choose_action(&mut self.board, &self.civs))
+        // } else { None };
+        //   Some()
+        let action = civ.choose_action(&mut self.board, &self.civs);
 
-        if let Some(action) = action {
-          self.board.apply(action, id, &mut self.civs);
-        }
+        // if let Some(action) = action {
+        self.board.apply(action, id, &mut self.civs);
+        // }
       }
       self.turn += 1;
     }

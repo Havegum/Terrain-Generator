@@ -82,8 +82,9 @@ impl Civilization {
         civ
     }
 
-    pub fn choose_action(&mut self, board: &mut Board) -> Action {
+    pub fn choose_action(&mut self, board: &mut Board, civs: &HashMap<usize, Civilization>) -> Action {
         // let actions: HashMap<Action> = HashMap::new();
+        
         
 
         // If occupy:
