@@ -107,6 +107,8 @@ function handleMouseUp (event) {
 }
 
 function handleScroll (event) {
+  if (event.target !== canvas) return;
+
   $camera.dist = Math.max(0, $camera.dist + event.deltaY * 4e-2);
   zoom.set(Math.max(0, $zoom + event.deltaY * (isFirefox ? 4e-3 : 2e-3)));
 }

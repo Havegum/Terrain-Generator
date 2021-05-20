@@ -84,7 +84,7 @@ $: indices = enumerate(world.points.length / 2);
 
 	{#if renderOptions.showTerritory && world.history}
 		<g class="territory">
-			{#each world.history.move_order.map(id => world.history.civs[id]) as civ}
+			{#each world.history.board.turn_order.map(id => world.history.board.civs[id]) as civ}
 				<g style="--c: {civ.color}">
 					{#each civ.territory as i}
 						<path d={renderCellPath(i)} vector-effect="non-scaling-stroke" />

@@ -1,30 +1,51 @@
 <script>
-let canvas, width, height;
+let canvas, width, height, timeout, w, h;
+
+$: timeoutSizeUpdates(w, h);
+
+function timeoutSizeUpdates (w, h)  {
+  if (!width) width = w;
+  if (!height) height = h;
+
+  clearTimeout(timeout);
+  timeout = setTimeout(function () {
+    width = w;
+    height = h;
+  }, 150);
+}
 </script>
 
 
-<canvas
-  bind:this={canvas}
-  bind:clientWidth={width}
-  bind:clientHeight={height}
-  {width}
-  {height}
-/>
+<div
+  class="sizer"
+  bind:clientWidth={w}
+  bind:clientHeight={h}
+>
+  <canvas
+    bind:this={canvas}
+    width="{width}px"
+    height="{height}px"
+  />
+</div>
+
 
 {#if canvas}
-  <slot {canvas} />
+  <slot {canvas} {width} {height} />
 {/if}
 
 
 <style>
-canvas {
+.sizer {
   position: absolute;
   top: 0;
-  bottom: 0;
   left: 0;
-  right: 0;
+}
+
+canvas, .sizer {
   height: 100%;
   width: 100%;
+}
+canvas {
   cursor: crosshair;
   object-fit: cover;
 }

@@ -1,6 +1,6 @@
 // use wasm_bindgen::prelude::*;
 use std::collections::{HashSet, HashMap};
-use std::iter::FromIterator;
+// use std::iter::FromIterator;
 // use super::mcts::SimulatedWorld;
 
 #[allow(unused_imports)]
@@ -8,12 +8,12 @@ use wasm_bindgen::{JsValue};
 #[allow(unused_imports)]
 use web_sys::console;
 
-use rand_core::{RngCore, SeedableRng};
+use rand_core::{SeedableRng};
 use rand_pcg::Pcg32;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use serde::{Serialize};
 
-use super::board::{Board, Action};
+use super::board::{Board};
 
 #[allow(unused_macros)]
 macro_rules! log {
@@ -70,71 +70,69 @@ impl Civilization {
         Civilization::new(id, name, color)
     }
 
-    pub fn spawn(
-        civs: &HashMap<usize, Civilization>,
-        board: &mut Board,
-        starting_location: Vec<usize>,
-    ) -> Civilization {
-        let mut civ = Self::new_distinct(civs);
+    pub fn spawn(board: &mut Board, starting_location: Vec<usize>) {
+        let civ = Self::new_distinct(&board.civs);
+        let civ_id = civ.id;
+        board.civs.insert(civ.id, civ);
         for territory in starting_location {
-            civ.add_territory(board, territory);
+            board.add_territory(civ_id, territory);
         }
-        civ
+        board.turn_order.push(civ_id);
     }
 
-    pub fn choose_action(&mut self, board: &mut Board, civs: &HashMap<usize, Civilization>) -> Action {
-        // let actions: HashMap<Action> = HashMap::new();
+    // pub fn choose_action(&mut self, board: &mut Board) -> Action {
+    //     // let actions: HashMap<Action> = HashMap::new();
         
         
 
-        // If occupy:
-        let candidates = Vec::from_iter(self.neighbor_territory.clone());
-        let territory = self.rng.next_u32() as usize % candidates.len();
-        let territory = candidates[territory];
-        let defender = board.cells[territory].owner_civ_id;
-        Action::Occupy(territory, defender)
+    //     // If occupy:
+    //     let candidates = Vec::from_iter(self.neighbor_territory.clone());
+    //     let territory = self.rng.next_u32() as usize % candidates.len();
+    //     let territory = candidates[territory];
+    //     let defender = board.cells[territory].owner_civ_id;
+    //     Action::Occupy(territory, defender)
         
-        // Perceptions of others must be fresh here. Maybe just call it just before finding actions
-        // self.perceive_priorities(&mut simulation.civilizations);
-        // let suggested_action: Action = simulation.find(self.id, &self.priorities, &self.perceptions);
-        // suggested_action
-        // unimplemented!();
-    }
+    //     // Perceptions of others must be fresh here. Maybe just call it just before finding actions
+    //     // self.perceive_priorities(&mut simulation.civilizations);
+    //     // let suggested_action: Action = simulation.find(self.id, &self.priorities, &self.perceptions);
+    //     // suggested_action
+    //     // unimplemented!();
+    // }
 
-    pub fn add_territory(&mut self, board: &mut Board, territory: usize) {
-        self.territory.insert(territory);
-        board.cells[territory].owner_civ_id = Some(self.id);
-        self.neighbor_territory.extend(
-            board.cells[territory].adjacent.difference(&self.territory).collect::<HashSet<&usize>>()
-        );
-        self.neighbor_territory.remove(&territory);
-    }
+    // pub fn add_territory(&mut self, board: &mut Board, territory: usize) {
+    //     self.territory.insert(territory);
+    //     board.cells[territory].owner_civ_id = Some(self.id);
+    //     self.neighbor_territory.extend(
+    //         board.cells[territory].adjacent.difference(&self.territory).collect::<HashSet<&usize>>()
+    //     );
+    //     self.neighbor_territory.remove(&territory);
+    // }
 
-    pub fn remove_territory(&mut self, board: &mut Board, territory: usize) {
-        self.territory.remove(&territory);
-        board.cells[territory].owner_civ_id = None;
+    // pub fn remove_territory(&mut self, board: &mut Board, territory: usize) {
+    //     self.territory.remove(&territory);
+    //     board.cells[territory].owner_civ_id = None;
 
-        let mut neighbors_neighbours = board.cells[territory].adjacent.clone();
-        neighbors_neighbours.insert(territory);
+    //     let mut neighbors_neighbours = board.cells[territory].adjacent.clone();
+    //     neighbors_neighbours.insert(territory);
 
-        for &n in neighbors_neighbours.iter() {
-            if self.territory.contains(&n) { continue }
-            self.neighbor_territory.remove(&n);
+    //     for &n in neighbors_neighbours.iter() {
+    //         if self.territory.contains(&n) { continue }
+    //         self.neighbor_territory.remove(&n);
 
-            let neighbours_owned_cell = board.cells[n].adjacent
-                .iter()
-                .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));
+    //         let neighbours_owned_cell = board.cells[n].adjacent
+    //             .iter()
+    //             .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));
 
-            if neighbours_owned_cell {
-                self.neighbor_territory.insert(n);
-            }
-        }
-    }
+    //         if neighbours_owned_cell {
+    //             self.neighbor_territory.insert(n);
+    //         }
+    //     }
+    // }
 
 
-    pub fn score(&self) -> f64 {
-        self.territory.len() as f64
-    }
+    // pub fn score(&self) -> f64 {
+    //     self.territory.len() as f64
+    // }
 }
 
 impl PartialEq for Civilization {

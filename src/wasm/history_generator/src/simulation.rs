@@ -32,29 +32,24 @@ pub struct World {
 struct SimulationOptions {
   seed: u32,
   initial_civs: u32,
-  turns: u32,
+  // turns: u32,
 }
 
+// This struct mostly serves as the JS-WASM interface
 #[wasm_bindgen(readonly)]
 #[derive(Serialize)]
 pub struct Simulation {
-  // civs: HashMap<usize, Civilization>,
-  // move_order: Vec<usize>, 
   board: Board,
-  turn: usize,
-  #[serde(skip_serializing)]
-  rng: Pcg32,
 }
-
 
 impl Simulation {
   fn new(world: World, simulation_options: SimulationOptions) -> Simulation {
     let mut rng = Pcg32::seed_from_u64(simulation_options.seed as u64);
 
-    let mut board = Board::new(world);
+    let turn_order = Vec::with_capacity(simulation_options.initial_civs as usize);
+    let civs = HashMap::with_capacity(simulation_options.initial_civs as usize);
+    let mut board = Board::new(world, civs, turn_order);
 
-    let mut move_order = Vec::with_capacity(simulation_options.initial_civs as usize);
-    let mut civs = HashMap::with_capacity(simulation_options.initial_civs as usize);
     for _ in 0..simulation_options.initial_civs {
       let starting_location = loop {
         // TODO: better spawn location than random
@@ -65,18 +60,9 @@ impl Simulation {
         }
       };
 
-      let civ = Civilization::spawn(&civs, &mut board, vec![starting_location]);
-      move_order.push(civ.id);
-      civs.insert(civ.id, civ);
+      Civilization::spawn(&mut board, vec![starting_location]);
     }
-
-    Simulation {
-      turn: 0,
-      civs,
-      move_order,
-      board,
-      rng,
-    }
+    Simulation { board }
   }
 }
 
@@ -88,53 +74,47 @@ impl Simulation {
     log!("Constructor called from JS!");
     let world: World = world.into_serde().unwrap();
 
-    let simulation_options = SimulationOptions { seed, initial_civs, turns: 0 };
+    let simulation_options = SimulationOptions { seed, initial_civs };
 
     Simulation::new(world, simulation_options)
   }
 
-  pub fn simulate(mut self, turns: u32) -> Simulation {
-    for _ in 0..turns {
-      log!("__________\nPLAYING TURN {}", self.turn);
+  #[wasm_bindgen(js_name = playRounds)]
+  pub fn play_rounds(mut self, rounds: u32) -> Simulation {
+    for _ in 0..rounds {
+      for _ in 0..self.board.turn_order.len() {
+        self.board.play_turn();
 
-      self.board.history.push(Vec::new());
-      
-      for &id in self.move_order.iter() {
-        let mut civ;
-        {
-          civ = self.civs.get_mut(&id).unwrap();
-        } 
-        // let action = if let Some(civ) = self.civs.get_mut(&id) {
-        //   log!("| {}'s turn", civ.name);
-        //   Some(civ.choose_action(&mut self.board, &self.civs))
-        // } else { None };
-        //   Some()
-        let action = civ.choose_action(&mut self.board, &self.civs);
-
-        // if let Some(action) = action {
-        self.board.apply(action, id, &mut self.civs);
-        // }
       }
-      self.turn += 1;
     }
     self
   }
 
-  pub fn revert(mut self, turns: u32) -> Simulation {
-    log!("Reverting {} turns", turns);
-    let i = self.board.history.len().saturating_sub(turns as usize);
+  #[wasm_bindgen(js_name = playTurns)]
+  pub fn play_turns(mut self, turns: u32) -> Simulation {
+    for _ in 0..turns {
+      self.board.play_turn();
+    }
+    self
+  }
 
-    let turns: Vec<Vec<Move>> = self.board.history
-      .drain(i..)
-      .collect();
-    
-    for actions in turns {
-      self.turn -= 1;
-      for action in actions.iter().rev() {
-        self.board.undo(&action, &mut self.civs);
+  #[wasm_bindgen(js_name = revertRounds)]
+  pub fn revert_rounds(mut self, rounds: u32) -> Simulation {
+    log!("Reverting {} rounds", rounds);
+    for _ in 0..rounds {
+      for _ in 0..self.board.turn_order.len() {
+        self.board.undo_last();
       }
     }
-    
+    self
+  }
+
+  #[wasm_bindgen(js_name = revertTurns)]
+  pub fn revert_turns(mut self, turns: u32) -> Simulation {
+    log!("Reverting {} turns", turns);
+    for _ in 0..turns {
+      self.board.undo_last();
+    }
     self
   }
 

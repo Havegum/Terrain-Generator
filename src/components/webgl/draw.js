@@ -6,11 +6,11 @@ import { color, normal } from './utils.js';
 import getRenderers from './renderers.js';
 
 
-export default function initDraw (canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights) {
+export default function initDraw ({ canvas, width: clientWidth, height: clientHeight}, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights) {
   const regl = REGL({ canvas, extensions: ['ANGLE_instanced_arrays'] });
 
   const fieldOfView = 20 * Math.PI / 180 // in radians
-  const aspect = canvas.clientWidth / canvas.clientHeight;
+  const aspect = clientWidth / clientHeight;
   const zNear = 0.1;
   const zFar = 100.0;
   const projectionMatrix = mat4.perspective(mat4.create(), fieldOfView, aspect, zNear, zFar);

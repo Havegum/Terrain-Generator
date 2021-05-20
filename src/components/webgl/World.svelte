@@ -4,6 +4,8 @@ import Camera from './Camera.svelte';
 import initDraw from './draw.js';
 
 export let canvas;
+export let width;
+export let height;
 
 // world
 export let seaLevel;
@@ -28,7 +30,7 @@ $: coastLines = coastLines.map(d => d.map(getEdgeCoordinates));
 
 
 let camera;
-$: draw = initDraw(canvas, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
+$: draw = initDraw({ canvas, width, height }, triangles, points, circumcenters, seaLevel, coastLines, rivers, cellHeights, heights);
 $: window.requestAnimationFrame(() => draw({ settings: renderOptions }));
 $: if (camera) window.requestAnimationFrame(() => draw({ camera: $camera }));
 </script>

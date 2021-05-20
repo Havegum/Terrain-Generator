@@ -1,91 +1,31 @@
-<script>
-import { slide } from 'svelte/transition';
-let expanded = false;
-</script>
-
-
-<div class="controls" class:expanded>
-  <button class="expand" on:click={() => expanded = !expanded}>
-    <svg viewBox="0 0 1 1" preserveAspectRatio="none">
-      <path vector-effect="non-scaling-stroke" d="M0,0 L1,0"/>
-      <path vector-effect="non-scaling-stroke" d="M0,0.5 L1,0.5"/>
-      <path vector-effect="non-scaling-stroke" d="M0,1 L1,1"/>
-    </svg>
-  </button>
-
-  {#if expanded}
-    <section class="settings" transition:slide={{ duration: 200 }}>
-      <h2>Settings</h2>
-      <hr>
-      <slot/>
-    </section>
-  {/if}
-</div>
+<aside class="controls">
+  <h2>Settings</h2>
+  <hr>
+  <section class="settings">
+    <slot/>
+  </section>
+</aside>
 
 
 <style>
 .controls {
-  color: #f2f2f2;
-  position: absolute;
-  left: 8px;
-  top: 8px;
   padding: 8px;
-  background-color: #33333300;
-  transition: background-color 200ms;
-  width: 20em;
-}
-
-.expanded {
-  background-color: #333333db;
-}
-
-@supports (backdrop-filter: blur(10px)) {
-  .expanded {
-    background-color: #3333337a;
-    backdrop-filter: blur(10px);
-  }
+  color: #f2f2f2;
+  background-color: #212121;
+  height: 100%;
+  overflow-y: hidden;
+  flex-direction: column;
+  display: flex;
 }
 
 .settings {
-  padding: 8px;
+  overflow-y: auto;
   display: grid;
+  align-items: start;
+  justify-content: start;
   grid-gap: 8px;
-}
 
-.expand {
-  background-color: transparent;
-  border: none;
-  color: inherit;
-  display: block;
-  width: 2.8em;
-  height: 2.2em;
-  padding: 8px;
-  cursor: pointer;
-  border-radius: 8px;
-}
-
-.expand:hover {
-  background-color: #ffffff11;
-}
-
-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  color: currentColor;
-}
-
-.expand:hover path {
-  opacity: 1;
-}
-
-path {
-  stroke: currentColor;
-  stroke-width: 3px;
-  opacity: .7;
-  stroke-linecap: round;
-  transition: stroke 300ms;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
 }
 
 h2 {
@@ -95,18 +35,49 @@ h2 {
 
 hr {
   border: none;
-  border-top: 1px solid currentColor;
+  border-top: 1px solid #434647;
+  margin: 2px 0 1px;
 }
 
 section :global(section) {
   margin-top: 8px;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: minmax(10ch, 1fr) 4fr minmax(12ch, 1fr);
   grid-gap: 14px 8px;
-
+  border: 1px solid #434647;
+  border-radius: 8px;
+  padding: 2px 8px 16px;
 }
 
-section :global(h3) {
+section :global(section > *) {
+  grid-column: 2 / 3;
+}
+
+section :global(section > .col-1) {
+  grid-column: 1 / 2;
+  text-align: right;
+}
+
+section :global(section > .col-3) {
+  grid-column: 3 / 4;
+}
+
+section :global(section > hr) {
+  grid-column: 1 / 4;
+  border: none;
+  border-top: 1px solid #434647;
+  margin-left: -8px;
+  margin-right: -8px;
+}
+
+section :global(section > hr + h4) {
+  margin-top: -.75em;
+  margin-bottom: .25em;
+}
+
+
+section :global(h3),
+section :global(h4) {
   font-weight: normal;
   font-size: inherit;
   font-size: .75em;

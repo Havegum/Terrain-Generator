@@ -5,7 +5,10 @@ import Controls from './components/Controls.svelte';
 import RenderControls from './components/RenderControls.svelte';
 import GenerationControls from './components/GenerationControls.svelte';
 
-import World from './components/webgl/World.svelte';
+import RenderFrame from './components/RenderFrame.svelte';
+import StaleOverlay from './components/StaleOverlay.svelte';
+import ResizeHandle from './components/ResizeHandle.svelte';
+import WebglRenderer from './components/webgl/World.svelte';
 import SvgRenderer from './components/svg/Renderer.svelte';
 
 import HISTORY_WASM from '@/wasm/history_generator/Cargo.toml';
@@ -58,7 +61,7 @@ async function gen () {
 
   history = await historyGenerator
     .then(({ Simulation }) => new Simulation(worldArg, 1234, 4))
-    .then(sim => sim.simulate(1));
+    .then(sim => sim);
     
   
   world.history = history.as_js_value();
@@ -66,18 +69,28 @@ async function gen () {
   stale = false;
 }
 
-async function incrementHistory () {
-  if (history) {
-    history = history.simulate(1);
-    world.history = history.as_js_value();
-  }
+async function playRounds ({ detail: rounds }) {
+  if (!history) return;
+  history = history.playRounds(rounds);
+  world.history = history.as_js_value();
 }
 
-async function revertHistory () {
-  if (history) {
-    history = history.revert(1);
-    world.history = history.as_js_value();
-  }
+async function undoRounds ({ detail: rounds }) {
+  if (!history) return;
+  history = history.revertRounds(rounds);
+  world.history = history.as_js_value();
+}
+
+async function playTurns ({ detail: turns }) {
+  if (!history) return;
+  history = history.playTurns(turns);
+  world.history = history.as_js_value();
+}
+
+async function undoTurns ({ detail: turns }) {
+  if (!history) return;
+  history = history.revertTurns(turns);
+  world.history = history.as_js_value();
 }
 
 gen();
@@ -90,6 +103,8 @@ function keyboardShortcuts (e) {
     renderer = renderers[(i + 1) % renderers.length];
   }
 }
+
+let viewportSize = 0.8;
 </script>
 
 
@@ -97,47 +112,41 @@ function keyboardShortcuts (e) {
   on:keydown={keyboardShortcuts}
 />
 
-{#if world}
-  {#if renderer === 'webgl'}
-    <Canvas let:canvas >
-      <World {canvas} {...world} renderOptions={renderOptions.webgl} />
-    </Canvas>
-  {:else if renderer === 'svg'}
-    <SvgRenderer {world} renderOptions={renderOptions.svg} />
-  {/if}
-{/if}
+<div class="app" style="--viewport-size: {viewportSize * 100}%">
+  <RenderFrame>
+    {#if world}
+      {#if renderer === 'webgl'}
+        <Canvas let:canvas let:width let:height >
+          <WebglRenderer {canvas} {width} {height} {...world} renderOptions={renderOptions.webgl} />
+        </Canvas>
+      {:else if renderer === 'svg'}
+        <SvgRenderer {world} renderOptions={renderOptions.svg} />
+      {/if}
+    {/if}
+    <StaleOverlay {stale}/>
+  </RenderFrame>
 
-<div class="overlay" class:stale />
+  <ResizeHandle bind:viewportSize min={0.2} max={0.9} />
 
-<Controls>
-  <RenderControls bind:renderer bind:renderOptions />
-  <GenerationControls
-    bind:generationOptions
-    on:reseed={() => generationOptions.seed = rng()}
-    on:regenerate={gen}
-    on:incrementHistory={incrementHistory}
-    on:revertHistory={revertHistory}
-  />
-</Controls>
+  <Controls>
+    <RenderControls bind:renderer bind:renderOptions />
+    <GenerationControls
+      bind:generationOptions
+      on:reseed={() => generationOptions.seed = rng()}
+      on:regenerate={gen}
+      on:playRounds={playRounds}
+      on:undoRounds={undoRounds}
+      on:playTurns={playTurns}
+      on:undoTurns={undoTurns}
+    />
+  </Controls>
+</div>
 
 
 <style>
-.overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background-color: hsl(216, 3%, 8%);
-  opacity: 0;
-  transition: opacity 250ms ease-out;
-}
-
-.stale {
-  opacity: 0.5;
-  cursor: progress;
-  pointer-events: auto;
-  transition: none;
+.app {
+  display: grid;
+  height: 100vh;
+  grid-template-rows: var(--viewport-size) auto 1fr;
 }
 </style>

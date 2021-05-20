@@ -12,13 +12,26 @@ async function reseed () {
   dispatch('reseed');
 }
 
-async function incrementHistory () {
-    dispatch('incrementHistory');
+let rounds = 1;
+let turns = 1;
+
+
+async function playRounds () {
+    dispatch('playRounds', rounds);
 }
 
-async function revertHistory () {
-    dispatch('revertHistory');
+async function undoRounds () {
+    dispatch('undoRounds', rounds);
 }
+
+async function playTurns () {
+    dispatch('playTurns', turns);
+}
+
+async function undoTurns () {
+    dispatch('undoTurns', turns);
+}
+
 
 async function reseedAndRegenerate () {
     reseed();
@@ -45,7 +58,7 @@ function trackHoverState (node) {
 
 
 <section>
-    <h3>Generation options</h3>
+    <h3>Generation</h3>
 
     <div class="regenerate" class:reseed-hover={reseedHover}>
         <button on:click={regenerate}>Regenerate</button>
@@ -53,31 +66,39 @@ function trackHoverState (node) {
     </div>
 
 
-    <label for="seed">Seed</label>
+    <label for="seed" class="col-1">Seed</label>
     <input class="span" id="seed" type="number" bind:value={generationOptions.seed}>
     <!-- <label for="seed">{generationOptions.seed}</label> -->
-
-    <label for="points">Points</label>
+    
+    <hr/>
+    <h4>Terrain generation</h4>
+    <label for="points" class="col-1">Points</label>
     <input id="points" type="range" min="250" max="7000" step="50" bind:value={generationOptions.points}>
-    <label for="points">{generationOptions.points}</label>
+    <label for="points" class="col-3">{generationOptions.points}</label>
 
-    <label for="sea-level">Sea level</label>
+    <label for="sea-level" class="col-1">Sea level</label>
     <input id="sea-level" type="range" min="0" max="1" step="0.01" bind:value={generationOptions.seaLevel}>
-    <label for="sea-level">{generationOptions.seaLevel}</label>
+    <label for="sea-level" class="col-3">{generationOptions.seaLevel}</label>
 
+    <hr/>
+    <h4>History generation</h4>
     <div>
-        <h4>History generation</h4>
-        <div>
-            <button on:click={revertHistory}>Step back</button>
-            <button on:click={incrementHistory}>Step forward</button>
-        </div>
+        <h5>Rounds</h5>
+        <input type="number" bind:value={rounds} />
+        <button on:click={undoRounds}>Undo {rounds} rounds</button>
+        <button on:click={playRounds}>Play {rounds} rounds</button>
+    </div>
+    <div>
+        <h5>Turns</h5>
+        <input type="number" bind:value={turns} />
+        <button on:click={undoTurns}>Undo {turns} turns</button>
+        <button on:click={playTurns}>Play {turns} turns</button>
     </div>
 </section>
 
 
 <style>
 .regenerate {
-    grid-column: 1 / -1;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
@@ -106,7 +127,6 @@ button:active {
     border-top: 1px solid white;
     border-bottom: 1px solid white;
     background-color: hsla(0, 0%, 100%, 0.2);
-
 }
 
 .reseed-hover button:last-child {
@@ -118,7 +138,7 @@ button:active {
 }
 
 .span {
-    grid-column-end: span 2;
+    /* grid-column-end: span 2; */
     background-color: transparent;
     border: none;
     border-bottom: 1px solid #888;

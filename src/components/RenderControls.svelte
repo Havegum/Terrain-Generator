@@ -20,11 +20,11 @@ export let renderOptions;
     </div>
 
     {#if renderer === 'webgl'}
-        <label for="rivers">Minimum river flux</label>
+        <label for="rivers" class="col-1">Minimum river flux</label>
         <input id="rivers" type="range" min="0" max="1000" step="1" bind:value={renderOptions.webgl.riverCap}>
-        <label for="rivers">{renderOptions.webgl.riverCap}</label>
+        <label for="rivers" class="col-3">{renderOptions.webgl.riverCap}</label>
     {:else if renderer === 'svg'}
-        <label for="show-territory">Show territory</label>
+        <label for="show-territory" class="col-1">Show territory</label>
         <input id="show-territory" type="checkbox" bind:checked={renderOptions.svg.showTerritory}>
         <!-- <label for="show-territory">{renderOptions.svg.showTerritory}</label> -->
     {/if}
@@ -33,7 +33,7 @@ export let renderOptions;
 
 <style>
 .render-selector {
-    grid-column: 1 / -1;
+    /* grid-column: 1 / -1; */
     display: grid;
     grid-template-columns: 1fr 1fr;
 }
@@ -57,6 +57,12 @@ export let renderOptions;
 
 input[type="radio"] {
     display: none;
+}
+
+input[type="checkbox"] {
+    align-self: center;
+    justify-self: start;
+    width: auto;
 }
 
 label.selected {

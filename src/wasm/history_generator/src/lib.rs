@@ -18,4 +18,5 @@ pub fn greet() {
 
 mod board;
 mod civ;
+mod mcts;
 pub mod simulation;
