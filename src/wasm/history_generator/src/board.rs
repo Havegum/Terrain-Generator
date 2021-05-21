@@ -23,11 +23,22 @@ macro_rules! log {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Action {
   Occupy(usize, Option<usize>),
   // Defend,
 }
+
+// impl Eq for Action {
+//   fn eq(&self, other: &Self) -> bool {
+//     match self {
+//       Action::Occupy(self_cell) =>
+//         if let Action::Occupy(other_cell) = other {
+//           self_cell == other_cell
+//         } else { false }
+//     }
+//   }
+// }
 
 #[derive(Debug)]
 pub struct Move {
@@ -74,12 +85,6 @@ impl Board {
     let rng = Pcg32::seed_from_u64(id as u64);
 
     Board { cells, history: Vec::new(), civs, turn_order, turn: 0, round: 0, rng }
-  }
-
-  pub fn play_round(&mut self) {
-    for _ in 0..self.turn_order.len() {
-      self.play_turn();
-    }
   }
 
   pub fn play_turn(&mut self) {

@@ -13,7 +13,7 @@ use rand_pcg::Pcg32;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use serde::{Serialize};
 
-use super::board::{Board};
+use super::board::{Board, Action, Cell};
 
 #[allow(unused_macros)]
 macro_rules! log {
@@ -79,55 +79,13 @@ impl Civilization {
         }
         board.turn_order.push(civ_id);
     }
-
-    // pub fn choose_action(&mut self, board: &mut Board) -> Action {
-    //     // let actions: HashMap<Action> = HashMap::new();
+    
+    pub fn get_actions(&self, cells: &Vec<Cell>) -> Vec<Action> {
+        let occupy = self.neighbor_territory.iter()
+            .map(|&i| Action::Occupy(i, cells[i].owner_civ_id));
         
-        
-
-    //     // If occupy:
-    //     let candidates = Vec::from_iter(self.neighbor_territory.clone());
-    //     let territory = self.rng.next_u32() as usize % candidates.len();
-    //     let territory = candidates[territory];
-    //     let defender = board.cells[territory].owner_civ_id;
-    //     Action::Occupy(territory, defender)
-        
-    //     // Perceptions of others must be fresh here. Maybe just call it just before finding actions
-    //     // self.perceive_priorities(&mut simulation.civilizations);
-    //     // let suggested_action: Action = simulation.find(self.id, &self.priorities, &self.perceptions);
-    //     // suggested_action
-    //     // unimplemented!();
-    // }
-
-    // pub fn add_territory(&mut self, board: &mut Board, territory: usize) {
-    //     self.territory.insert(territory);
-    //     board.cells[territory].owner_civ_id = Some(self.id);
-    //     self.neighbor_territory.extend(
-    //         board.cells[territory].adjacent.difference(&self.territory).collect::<HashSet<&usize>>()
-    //     );
-    //     self.neighbor_territory.remove(&territory);
-    // }
-
-    // pub fn remove_territory(&mut self, board: &mut Board, territory: usize) {
-    //     self.territory.remove(&territory);
-    //     board.cells[territory].owner_civ_id = None;
-
-    //     let mut neighbors_neighbours = board.cells[territory].adjacent.clone();
-    //     neighbors_neighbours.insert(territory);
-
-    //     for &n in neighbors_neighbours.iter() {
-    //         if self.territory.contains(&n) { continue }
-    //         self.neighbor_territory.remove(&n);
-
-    //         let neighbours_owned_cell = board.cells[n].adjacent
-    //             .iter()
-    //             .any(|&nn| board.cells[nn].owner_civ_id == Some(self.id));
-
-    //         if neighbours_owned_cell {
-    //             self.neighbor_territory.insert(n);
-    //         }
-    //     }
-    // }
+        occupy.collect()
+    }
 
 
     // pub fn score(&self) -> f64 {

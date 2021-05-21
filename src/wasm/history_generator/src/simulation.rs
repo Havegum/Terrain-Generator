@@ -7,7 +7,7 @@ use rand_core::{RngCore, SeedableRng};
 use rand_pcg::Pcg32;
 use std::collections::HashMap;
 
-use super::board::{Board, Move};
+use super::board::{Board};
 use super::civ::Civilization;
 
 #[allow(unused_macros)]
