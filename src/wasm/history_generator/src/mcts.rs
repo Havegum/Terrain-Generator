@@ -1,6 +1,7 @@
 #[allow(unused_imports)]
 use web_sys::console;
 use std::collections::HashMap;
+use std::iter::FromIterator;
 use rand_core::{RngCore};
 
 use super::board::{Board, Action, Cell};
@@ -18,32 +19,49 @@ macro_rules! log {
 }
 
 
-struct Node<'a> {
-  visited: u32,
-  cumulative_value: f64,
-  board: Option<&'a mut Board>,
-  children: HashMap<Action, Node<'a>>,
-  parent: Option<&'a Node<'a>>,
+fn hm_addition(a: &mut HashMap<usize, f64>, b: HashMap<usize, f64>) -> HashMap<usize, f64> {
+  for (&key, &rhs) in b.iter() {
+    match a.get(&key) {
+      Some(value) => a.insert(key, value + rhs),
+      None => a.insert(key, rhs),
+    };
+  }
+  a
 }
 
-impl<'a> Node<'a> {
+
+struct Node {
+  visited: u32,
+  index: usize,
+  cumulative_value: HashMap<usize, f64>,
+  expanded: bool,
+  children: HashMap<Action, usize>,
+  parent: Option<usize>,
+}
+
+impl Node {
   const ROLLOUT_DEPTH: u32 = 8;
   const EXPLORATION_FACTOR: u32 = 2;
 
-  pub fn value(&self) -> f64 {
-    self.cumulative_value / self.visited as f64
+  pub fn value(&self) -> HashMap<usize, f64> {
+    self.cumulative_value
+      .clone()
+      .iter()
+      .map(|(&key, value)| (key, value / self.visited as f64))
+      .collect()
   }
 
   pub fn ucb(&self, _n: u32) -> f64 {
     if self.visited == 0 { f64::MAX } else { 1. }
   }
 
-  pub fn new(board: Option<&'a mut Board>, parent: Option<&'a Node<'a>>) -> Node<'a> {
+  pub fn new(parent: Option<usize>, index: usize) -> Node {
     Node {
-      board,
       parent,
+      index,
       visited: 0,
-      cumulative_value: 0.,
+      cumulative_value: HashMap::new(),
+      expanded: false,
       children: HashMap::new(),
     }
   }
@@ -52,42 +70,34 @@ impl<'a> Node<'a> {
     self.visited == 0
   }
 
-  pub fn expand(&'a mut self) {
-    let board =  self.board.take().unwrap();
-    let civ = &board.turn_order[board.turn];
+  pub fn expand(&mut self, board: &mut Board, mut get_index: impl FnMut() -> usize) -> Vec<Node> {
+    self.expanded = true;
+    let civ = board.turn_order[board.turn];
+    let civ = board.civs.get(&civ).unwrap();
 
-    if let Some(civ) = board.civs.get(civ) {
-      for action in civ.get_actions(&board.cells).drain(..) {
-        let node = Node::new(None, None);
-        self.children.insert(action, node);
-      }
-    }
+    civ.get_actions(&board.cells)
+      .drain(..)
+      .map(|action| {
+        let index = get_index();
+        self.children.insert(action, index);
+        Node::new(Some(self.index), index)
+      })
+      .collect()
   }
 
-  pub fn select(&mut self, board: &mut Board) -> &'a Node {
-    if self.children.is_empty() {
-      return self;
-    }
 
-    // let { ref mut children, ref mut board, }
-    // TODO: solve the borrow problems:
-    // IDEA: track tree structure outside of the tree itself
-    // borrow references only to active leaf nodes when they need it
-
-
+  pub fn select(&mut self, board: &mut Board) -> usize {
     let mut actions = self.children.keys();
+
+    // SELECT RANDOM ACTION FOR NOW
     let action = board.rng.next_u32() as usize % actions.len();
     let action = actions.nth(action).unwrap().clone();
 
-    // `self`is mutably borrowed here
-    let selected = self.children.get_mut(&action).unwrap();
-
-    // And again here ...
-    selected.parent.replace(self);
-    selected
+    *self.children.get_mut(&action).unwrap()
   }
 
-  pub fn rollout(&mut self, depth: u32) -> HashMap<usize, f64> {
+
+  pub fn rollout(&mut self, board: &mut Board, depth: u32) -> HashMap<usize, f64> {
     if depth > Node::ROLLOUT_DEPTH {
       return HashMap::new();
     }
@@ -96,7 +106,7 @@ impl<'a> Node<'a> {
 
     // simulate with random actions forever, until depth `n`, then return value.
 
-    self.rollout(depth + 1)
+    self.rollout(board, depth + 1)
   }
 
   fn backpropagate(&mut self) {
@@ -118,14 +128,42 @@ impl<'a> MCTS<'a> {
     let action = board.rng.next_u32() as usize % actions.len();
     let action = actions[action].clone();
     
-    let root_node = Node::new(Some(board), None);
-    // let selected = root_node.select(board);
-    // if selected.is_leaf() {
-    //   selected.expand();
-    // }
-    // selected.rollout(0);
+    let mut i = 0;
+    let mut get_index = || { i += 1; i - 1 };
+
+    let root = get_index();
+    let mut nodes = vec![Node::new(None, root)];
+    let children = nodes[root].expand(board, get_index);
+    nodes.extend(children);
+
+    let mut current = 0;
     
+    // LOOP
+    {
+      // SELECT
+      while !nodes[current].expanded {
+        current = nodes[current].select(board);
+      }
+      
+      // EXPAND
+      if nodes[current].visited > 0 {
+        let children = nodes[current].expand(board, get_index);
+        nodes.extend(children);
+        current = nodes[current].select(board);
+      }
+
+      // ROLLOUT
+      let value = nodes[current].rollout(board, 0);
+
+      // BACKPROPAGATE
+      while let Some(parent) = nodes[current].parent {
+        hm_addition(nodes[current].cumulative_value, value);
+        nodes[current].visited += 1;
+        current = parent;
+      }
+    }
     
+
     action
   }
 
