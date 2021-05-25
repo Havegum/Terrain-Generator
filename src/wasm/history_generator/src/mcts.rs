@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use web_sys::console;
 use std::collections::HashMap;
-use std::iter::FromIterator;
+// use std::iter::FromIterator;
 use std::cmp::Ordering::Less;
 use rand_core::{RngCore};
 
@@ -30,12 +30,56 @@ fn hm_addition(a: &mut HashMap<usize, f64>, b: &HashMap<usize, f64>) {
   }
 }
 
-// enum Node {
-//   Action(ActionNode),
-//   Result(ResultNode),
-// }
+enum Node {
+  Action(ActionNode),
+  Result(ResultNode),
+}
 
-struct Node {
+struct ActionNode {
+  visited: u32,
+  index: usize,
+  cumulative_value: HashMap<usize, f64>,
+  action: Action,
+  true_child: Option<usize>,
+  false_child: Option<usize>,
+  parent: Option<usize>,
+}
+
+impl ActionNode {
+  pub fn new(parent: Option<usize>, index: usize, action: Action) -> Self {
+    Self {
+      parent,
+      index,
+      action,
+      visited: 0,
+      cumulative_value: HashMap::new(),
+      true_child: None,
+      false_child: None
+    }
+  }
+
+  pub fn expand(&mut self, mut i: usize) -> Vec<Node> {
+    self.true_child = Some(i + 1);
+    self.false_child = Some(i + 2); 
+
+    vec![
+      Node::Result(ResultNode::new(Some(self.index), self.true_child.unwrap())),
+      Node::Result(ResultNode::new(Some(self.index), self.false_child.unwrap())),
+    ]
+  }
+
+  pub fn select(&self, board: &mut Board) -> usize {
+    let turn = board.turn_order[board.turn];
+
+    if board.check(&self.action, turn) {
+      self.true_child.unwrap()
+    } else {
+      self.false_child.unwrap()
+    }
+  }
+}
+
+struct ResultNode {
   visited: u32,
   index: usize,
   cumulative_value: HashMap<usize, f64>,
@@ -44,26 +88,8 @@ struct Node {
   parent: Option<usize>,
 }
 
-impl Node {
+impl ResultNode {
   const ROLLOUT_DEPTH: u32 = 8;
-  // const EXPLORATION_FACTOR: u32 = 2;
-
-  pub fn value(&self) -> HashMap<usize, f64> {
-    self.cumulative_value
-      .clone()
-      .iter()
-      .map(|(&key, value)| (key, value / self.visited as f64))
-      .collect()
-  }
-
-
-  fn ucb(avg_val: f64, visits: u32, parent_visits: u32) -> f64 {
-    const EXPLORATION: f64 = 2.0;
-    let visits = visits as f64;
-    let parent_visits = parent_visits as f64;
-
-    avg_val + EXPLORATION * (parent_visits.ln() / visits).sqrt()
-  }
 
   pub fn new(parent: Option<usize>, index: usize) -> Self {
     Self {
@@ -76,11 +102,7 @@ impl Node {
     }
   }
 
-  pub fn is_leaf(&self) -> bool {
-    self.visited == 0
-  }
-
-  pub fn expand(&mut self, board: &mut Board, mut i: usize) -> Vec<Self> {
+  pub fn expand(&mut self, board: &mut Board, mut i: usize) -> Vec<Node> {
     self.expanded = true;
     let civ = board.turn_order[board.turn];
     let civ = board.civs.get(&civ).unwrap();
@@ -91,7 +113,9 @@ impl Node {
         let index = i;
         i += 1;
         self.children.insert(action, index);
-        Self::new(Some(self.index), index)
+        Node::Action(
+          ActionNode::new(Some(self.index), index, action.clone())
+        )
       })
       .collect()
   }
@@ -122,9 +146,8 @@ impl Node {
         .collect();
     }
 
-    // unimplementend!()
-
     // simulate with random actions forever, until depth `n`, then return value.
+    // unimplementend!()
 
     self.rollout(board, depth + 1)
   }
@@ -146,10 +169,15 @@ impl MCTS {
     let mut idx = 0;
 
     let root = idx;
-    let mut nodes = vec![Node::new(None, root)];
-    let children = nodes[root].expand(board, idx);
-    idx += children.len();
-    nodes.extend(children);
+    let mut nodes: Vec<Node> = vec![
+      Node::Result(ResultNode::new(None, root))
+    ];
+
+    if let Node::Result(n) = nodes[root] {
+      let children = n.expand(board, idx);
+      idx += children.len();
+      nodes.extend(children);
+    }
 
     let mut current = 0;
 
@@ -157,54 +185,118 @@ impl MCTS {
     for _ in 0..ITERATIONS {
 
       // SELECT
-      while !nodes[current].expanded {
-        // match nodes[current].kind {
-        // 
-        // }
-        let current_visits = nodes[current].visited;
-        current = nodes[current].select(board, |child, civ|
-          Self::ucb_from_nodes(&nodes[child], civ, &nodes[current])
-        );
+      loop {
+        if let Node::Result(n) = nodes[current] {
+          current = n.select(board, |child, civ|
+            Self::ucb_from_nodes(&nodes[child], civ, &Node::Result(n))
+          );
+        }
+
+        if let Node::Action(n) = nodes[current] {
+          current = n.select(board);
+        }
+
+        // stop SELECT if
+        // result node && leaf node (leaf nodes aren't expanded)
+        if let Node::Result(n) = nodes[current] {
+          if !n.expanded { break }
+        }
       }
       
       // EXPAND
-      if nodes[current].is_leaf() {
-        let children = nodes[current].expand(board, idx);
-        idx += children.len();
-        // let stochastic_nodes = Nodes::expand_stochastic(children, idx);
-        nodes.extend(children);
+      if let Node::Result(n) = nodes[current] {
+        // if we've been here before: EXPAND
+        if n.visited > 0 {
+          let children = n.expand(board, idx);
+          idx += children.len();
 
-        // current = nodes[current].select(board);
+          let action_children = children.iter_mut()
+            .flat_map(|n| {
+              if let Node::Action(n) = n {
+                let c = n.expand(idx);
+                idx += c.len();
+                c
+              } else { Vec::new() }
+            })
+            .collect::<Vec<Node>>();
+          nodes.extend(children);
+          nodes.extend(action_children);
+
+          current = *n.children.values().nth(0).unwrap();
+          if let Node::Action(n) = nodes[current] {
+            current = n.select(board);
+          }
+        }
       }
 
-      // ROLLOUT
-      let value = nodes[current].rollout(board, 0);
+      let value = match nodes[current] {
+        Node::Result(n) => Some(n.rollout(board, 0)),
+        _ => None,
+      };
+      let value = value.unwrap();
 
+      
       // BACKPROPAGATE
-      while let Some(parent) = nodes[current].parent {
-        hm_addition(&mut nodes[current].cumulative_value, &value);
-        nodes[current].visited += 1;
-        current = parent;
+      while let Some(parent) = match nodes[current] {
+        Node::Action(n) => n.parent,
+        Node::Result(n) => n.parent,
+      } {
+        match nodes[current] {
+          Node::Action(n) => {
+            hm_addition(&mut n.cumulative_value, &value);
+            n.visited += 1;
+            current = parent;
+          },
+          Node::Result(n) => {
+            hm_addition(&mut n.cumulative_value, &value);
+            n.visited += 1;
+            current = parent;
+          },
+        }
       }
     }
-    
-    let (action, ..) = nodes[0].children.iter()
-      .max_by(|(k1, &v1), (k2, &v2)| nodes[v1].visited.cmp(&nodes[v2].visited))
+
+    let n = match nodes[0] {
+      Node::Result(n) => Some(n),
+      _ => None,
+    };
+    let n = n.unwrap();
+
+    let (action, ..) = n.children.iter()
+      .max_by(|(k1, &v1), (k2, &v2)| {
+        match (nodes[v1], nodes[v2]) {
+          (Node::Action(a), Node::Action(b)) => a.visited.cmp(&b.visited),
+          _ => Less,
+        }
+      })
       .unwrap();
 
     action.clone()
   }
 
-  fn ucb_from_nodes(node: &Node, civ_turn: usize, parent: &Node) -> f64 {
-    if node.visited == 0 {
+  fn ucb_from_nodes(node: &Node, civ: usize, parent: &Node) -> f64 {
+    let visited = match node {
+      Node::Action(n) => n.visited,
+      Node::Result(n) => n.visited,
+    };
+
+    if visited == 0 {
       return f64::INFINITY;
     }
 
-    Self::ucb(
-      *node.cumulative_value.get(&civ_turn).unwrap_or(&0.0) / node.visited as f64,
-      node.visited,
-      parent.visited,
-    )
+    let cumulative_value = match node {
+      Node::Action(n) => n.cumulative_value.get(&civ).unwrap_or(&0.0),
+      Node::Result(n) => n.cumulative_value.get(&civ).unwrap_or(&0.0),
+    };
+
+    let parent_visited = match parent {
+      Node::Action(n) => n.visited,
+      Node::Result(n) => n.visited,
+    };
+
+    let avg_val = *cumulative_value / visited as f64;
+
+    Self::ucb(avg_val, visited, parent_visited)
   }
 
   fn ucb(avg_val: f64, visits: u32, parent_visits: u32) -> f64 {
