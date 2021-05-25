@@ -29,17 +29,6 @@ pub enum Action {
   // Defend,
 }
 
-// impl Eq for Action {
-//   fn eq(&self, other: &Self) -> bool {
-//     match self {
-//       Action::Occupy(self_cell) =>
-//         if let Action::Occupy(other_cell) = other {
-//           self_cell == other_cell
-//         } else { false }
-//     }
-//   }
-// }
-
 #[derive(Debug)]
 pub struct Move {
   civ_id: usize,
@@ -88,36 +77,44 @@ impl Board {
   }
 
   pub fn play_turn(&mut self) {
-    log!("================\nStart of round {}", self.round);
-    log!("_______________\nStart of turn {}", self.turn);
     if self.turn == 0 {
+      log!("================\nStart of round {}", self.round);
       self.history.push(Vec::new());
     }
+    log!("_______________\nStart of turn {}", self.turn);
 
-    let id = self.turn_order[self.turn];
-    let action = MCTS::search(self, id);
-    self.turn = (self.turn + 1) % self.turn_order.len();
+    let civ = self.turn_order[self.turn];
+    let action = MCTS::search(self, civ);
 
-    if self.turn == 0 {
-      self.round += 1;
+    let successful = self.check(&action, civ);
+
+    let mv = Move { civ_id: civ, action, successful };
+    self.play(mv);
+  }
+
+  pub fn check(&mut self, action: &Action, civ: usize) -> bool {
+    match action {
+      Action::Occupy(territory, defender) => 
+        self.check_occupy(territory, civ, defender)
+    }
+  }
+
+  pub fn play(&mut self, mv: Move) {
+    if mv.successful {
+      match mv.action {
+        Action::Occupy(territory, defender) =>
+          self.apply_occupy(territory, mv.civ_id, defender),
+      };
     }
 
-    self.apply(action, id);
-
+    self.turn += 1;
+    self.turn %= self.turn_order.len();
+    self.history.last_mut().unwrap().push(mv);
   }
 
-  pub fn apply(&mut self, action: Action, civ_id: usize) {
-    let action = match action {
-      Action::Occupy(territory, defender) =>
-        self.apply_occupy(territory, civ_id, defender),
-    };
-
-    self.history.last_mut().unwrap().push(action);
-  }
-
-  pub fn undo(&mut self, r#move: &Move) {
-    if r#move.successful {
-      match r#move.action {
+  pub fn undo(&mut self, mv: &Move) {
+    if mv.successful {
+      match mv.action {
         Action::Occupy(territory, defender) =>
           self.undo_occupy(territory, defender),
       };
@@ -132,8 +129,8 @@ impl Board {
           self.round = self.round.saturating_sub(1);
           self.undo_last();
         },
-        Some(r#move) => {
-          self.undo(&r#move);
+        Some(mv) => {
+          self.undo(&mv);
           match self.turn.checked_sub(1) {
             Some(n) => self.turn = n,
             None => self.turn = self.turn_order.len() - 1,
@@ -188,21 +185,16 @@ impl Board {
 
 // Occupy
 impl Board {
-  pub fn apply_occupy(&mut self, territory: usize, aggressor: usize, defender: Option<usize>) -> Move {
-    let successful = match defender {
+  pub fn check_occupy(&mut self, territory: &usize, aggressor: usize, defender: &Option<usize>) -> bool {
+    match defender {
       None => true, // No defender => auto succeed
       Some(_) => self.rng.next_u32() > u32::MAX / 2, // Otherwise, roll dice
-    };
-
-    if successful {
-      if let Some(_) = defender {
-        self.free_territory(territory);
-      }
-      self.add_territory(aggressor, territory);
     }
+  }
 
-    let action = Action::Occupy(territory, defender);
-    Move { action, civ_id: aggressor, successful }
+  pub fn apply_occupy(&mut self, territory: usize, aggressor: usize, defender: Option<usize>) {
+    self.free_territory(territory);
+    self.add_territory(aggressor, territory);
   }
 
   pub fn undo_occupy(&mut self, territory: usize, defender: Option<usize>) {

@@ -88,9 +88,9 @@ impl Civilization {
     }
 
 
-    // pub fn score(&self) -> f64 {
-    //     self.territory.len() as f64
-    // }
+    pub fn score(&self) -> f64 {
+        self.territory.len() as f64
+    }
 }
 
 impl PartialEq for Civilization {
